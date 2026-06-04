@@ -3,7 +3,41 @@
 What shipped, plus every review finding and its resolution (rule 2). Newest
 first. This is the audit trail; STATUS.md is the current-state snapshot.
 
-## 2026-06-03, session 2: GitHub + data-layer PR1 + PR2 + PR3
+## 2026-06-03, session 2: GitHub + data layer (PR1+PR2+PR3) + cost-model design
+
+### Cost model + random-entry null: design locked (ADR 0003)
+
+The kill-gate milestone was designed (a file-by-file plan) and put through an
+independent senior-quant design review that grounded itself in the actual code.
+The review verified the per-trade off-by-one against `make_label_horizons`
+(entry i owns settlements i+1..i+H, the same trade the CPCV label scores) and
+returned APPROVE-WITH-CHANGES with three merge-blocking findings, all resolved in
+ADR 0003:
+
+- **C1 (funding sign):** the repo's `funding_rate` wording and the negative
+  default test fixtures made the short-collects-funding sign a trap. Resolution:
+  freeze the convention (`funding_rate` positive = longs pay shorts; the short
+  book collects `+sum(funding_rate)`) and pin it with an economic-direction
+  fixture, never a comment.
+- **C2 (cost amortisation inflates the Deflated Sharpe):** smearing the
+  once-per-trade round-trip cost across H intervals shrinks the realized
+  skew/kurtosis the DSR penalises and inflates it. Resolution: book the cost on
+  the interval it is incurred (lumpy), report amortised-vs-lumpy as a diagnostic,
+  and the kill decision reads the less favourable.
+- **C3 (CPCV embargo blind to the hold overlap):** an always-on carry with H>1
+  has overlapping holds; the fraction-of-T embargo can be smaller than H, leaking
+  across the train/test boundary. Resolution: force `embargo_count >= H`.
+
+Plus the resolved highs: a financing/capital cost for the no-cross-margin 2N
+capital base; the DSR headline read PRE-tax (tax is a personal level-shift, not a
+property of the edge) with after-tax as an annual sidebar; a non-overlapping
+return series so the DSR `T` is honest; the random-entry null recorded as a
+separate control family (so at this pre-signal milestone the kill number is
+PSR(0) at n_effective=1); a measured-or-conservative spread so the most-likely
+loss cannot be soft-assumed into a false pass; and a funding-sign-regime
+decomposition. ADR 0003 carries the full locked design; PR4a/PR4b implement it.
+
+## 2026-06-03, session 2: GitHub + data layer (PR1+PR2+PR3)
 
 ### Data-layer PR3 (OKX live source + Binance-vs-OKX funding delta) + ADR 0002 amendment
 

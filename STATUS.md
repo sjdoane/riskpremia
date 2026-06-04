@@ -4,21 +4,21 @@ Single source of truth for where Project RiskPremia is and what is deferred.
 Read this first on any new session. Update after every meaningful work block
 (rule 2).
 
-Last updated: 2026-06-03 (session 2, data-layer PR3).
+Last updated: 2026-06-03 (session 2, cost-model design locked).
 
 ## One-line state
 
 Lead track LOCKED: **Track B (crypto perpetual-futures funding carry,
 delta-neutral), framed as a measurement study.** Repo on GitHub
-(https://github.com/sjdoane/riskpremia); PR1 + PR2 MERGED. GitHub presents as solo
-work (no AI attribution; see the no-AI-attribution memory). Data-layer **PR3 (OKX
-live source + Binance-vs-OKX funding delta) implemented and green** (ruff, mypy
---strict 20 files, 55 offline + 5 live network tests, em-dash clean) on branch
-`feat/data-layer-pr3-okx`; ADR 0002 amended; post-implementation review in
-progress. Live-verified: OKX recent-only funding + the venue-basis delta (small,
-under 0.1%/8h). httpx removed (data layer is now stdlib-only fetch). This
-COMPLETES the cut-to-ship data layer. NEXT IS THE COST MODEL (ADR 0003) + a
-random-entry null = the first economic kill gate. No strategy logic yet.
+(https://github.com/sjdoane/riskpremia); PR1 + PR2 + PR3 MERGED, so the
+**reproducible multi-venue data layer is COMPLETE**. GitHub presents as solo work
+(no AI attribution). The **cost model + random-entry null (the kill gate) is
+DESIGNED and deeply reviewed** (ADR 0003): a senior-quant design review caught 3
+merge-blocking issues that would have biased the kill number optimistically (an
+unpinned funding sign, cost-amortisation inflating the Deflated Sharpe, and a
+CPCV embargo blind to the hold overlap), all resolved in ADR 0003. NEXT:
+implement PR4a (the per-trade P&L math) then PR4b (the null + the first
+net-of-cost kill number). No strategy logic yet.
 
 GOTCHA (Windows, load-bearing): polars needs the `tzdata` package to resolve the
 "UTC" tz string when materializing tz-aware datetimes (pinned `tzdata==2026.2` in
