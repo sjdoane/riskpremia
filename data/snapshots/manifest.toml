@@ -1,0 +1,20 @@
+# Raw data snapshot manifest (the data-layer instance of the determinism
+# invariant, inherited from pit-backtest). Every raw exchange snapshot the
+# study consumes is recorded here with its source URL, the UTC fetch date, and
+# the SHA256 of the on-disk bytes, so a reviewer can re-fetch and verify they
+# have byte-identical inputs before regenerating any derived artifact. Raw
+# bytes are gitignored; this manifest and the derived artifacts are committed.
+#
+# Populated during the data-layer milestone (ADR TBD). Schema (per entry):
+#
+# [[snapshot]]
+# name        = "binance-vision-fundingRate-BTCUSDT-2020-01..2026-05"
+# venue       = "binance-vision"          # binance-vision | okx | hyperliquid
+# instrument  = "BTCUSDT"
+# kind        = "funding_rate"            # funding_rate | klines
+# source_url  = "https://data.binance.vision/..."
+# fetched_utc = "2026-06-..."
+# sha256      = "..."
+# rows        = 0
+
+# (empty until the first pull)
