@@ -3,6 +3,72 @@
 What shipped, plus every review finding and its resolution (rule 2). Newest
 first. This is the audit trail; STATUS.md is the current-state snapshot.
 
+## 2026-06-04, session 4 (PR5d): the delta-hedged-option cost model (Layer ii, cost-model-first)
+
+The cost side of the short-variance test, built BEFORE the P&L/null (rule 6). Shipped on
+`feat/vrp-option-cost-model`:
+
+- `execution/cost.py` `DeribitOptionCostModel` (frozen) + the cited `DERIBIT_OPTION`: the
+  transaction cost of a delta-hedged SHORT option, every term a positive fraction of the
+  underlying notional S (the inverse-contract convention; S is the COST base, NOT the
+  return base). Deribit fees (web-verified + cited June 2026): trade fee min(0.03% of
+  underlying, 12.5% of premium), maker == taker; delivery fee 0.015% of underlying capped
+  at 12.5% of value, daily options exempt; the perp delta-hedge leg on the Deribit perp
+  (taker 0.05%, maker rebate dropped to 0).
+- `execution/options.py` `delta_hedged_option_cost` + `OptionCostBreakdown`: the
+  quote-driven cost decomposition (option fee on the executed bid + the measured entry
+  spread + the conservative delivery ceiling + the perp hedge floor), with loud guards
+  (untradeable quote, |delta| > 1) and a self-consistency post-init.
+- A deterministic offline real-data pin on the committed Tardis sample fixture (the ATM
+  0.03%-fee leg and a deep-OTM 12.5%-cap leg both exercised) + a live network cost test.
+
+**The first real option cost** (live, a near-ATM BTC call): round-trip 16.1 bps of the
+underlying (option fee 3.0 + floored spread 5.0 + hedge 6.6 + delivery 1.5) against ~110
+bps of premium received, i.e. about 15% of the premium consumed by entry/exit costs
+before the dominant un-modeled path-rehedge term. 154 offline + 12 network tests; mypy
+--strict (src + scripts, 40 files), ruff, em-dash clean.
+
+**Binding deploy caveat (the ADR 0001 C1 analogue):** `tradeable=False`. US retail
+cannot directly trade Deribit; the regulated path (Coinbase Financial Markets, CFTC-
+cleared May 2026) is institutional-live / retail-coming-soon. The kill gate reads the
+flag, and the eventual deploy verdict notes the access path is improving but not yet open
+to US retail.
+
+#### Design review (APPROVE-WITH-CHANGES, 2 Critical + 4 High, all resolved before/while implementing)
+
+- **C1 [fixed]:** pin the capital base now. A short option is margined (~15% of S), not
+  fully funded, so the eventual Sharpe must divide net P&L by the margin, not S. Added a
+  cited `initial_margin_fraction` field and documented "S = cost base, NOT return base" so
+  the units cannot drift in PR5e.
+- **C2 [fixed]:** charge the option trade fee on the EXECUTED bid (the premium actually
+  received), not the mark, so the fee matches the cash inflow; pinned by a cap-binding test.
+- **H1 [fixed]:** the static entry+exit hedge is labeled a cost FLOOR; the path rehedge is
+  the dominant un-modeled term (ADR 0004 caveat 3). **H2 [fixed]:** the hedge is modeled
+  same-venue on the Deribit perp and hedge financing is named as deferred (not silently
+  dropped). **H3 [fixed]:** a crossed/thin quote (mark <= bid) is floored, never a
+  zero/negative spread, with a `spread_is_floored` flag. **H4 [fixed]:** the flat delivery
+  fee is labeled a CEILING (the OTM majority expire worthless and pay ~0; PR5e charges it
+  ITM-conditional on the actual intrinsic).
+- Mediums folded in: a `routing_fee` field at 0 for the Coinbase layer (M1); the cost
+  invariants + exact-equality where construction allows (M2); full value-domain validation
+  (cap in [0,1], margin in (0,1], |delta| <= 1) (M3); a deterministic offline cost test on
+  the committed fixture, not only a live test (M4). Lows: the inverse-contract + short-side
+  + full-spread-vs-half-spread conventions documented.
+
+#### Post-implementation review (SHIP, 0 Critical/High/Medium, 2 Low fixed)
+
+The reviewer reproduced the real-fixture cost decomposition by hand (matching to 1e-18),
+confirmed every term is genuinely a fraction of S with no coin/fraction mixing, found no
+under-charging beyond the named deferrals, and confirmed the Deribit fee rules + the loud
+guards. Resolved:
+
+- **L1 [fixed]:** named the single-contract / touch-bid fill assumption (the spread is the
+  touch-level `mark - bid`, not a depth-aware walk of `bid_amount`) alongside the other
+  deferrals, so PR5e inherits it as a known bound.
+- **L2 [fixed]:** added a `__attrs_post_init__` self-consistency guard to
+  `OptionCostBreakdown` (matching the repo's other frozen carriers), so a hand-constructed
+  instance cannot carry inconsistent entry/exit/round-trip fields.
+
 ## 2026-06-04, session 4 (PR5c): the Tardis Deribit option-chain loader (Layer ii data layer)
 
 The first piece of Layer ii (the cost-gated short-variance test), built cost-model-

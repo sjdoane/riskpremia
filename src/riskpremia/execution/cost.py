@@ -267,6 +267,183 @@ OKX_REFERENCE = VenueCostModel(
     ),
 )
 
+@attrs.frozen(slots=True)
+class DeribitOptionCostModel:
+    """The modeled transaction cost of a DELTA-HEDGED SHORT option on Deribit (ADR 0004
+    Layer ii). A sibling to `VenueCostModel` for the option leg + its perp delta hedge.
+
+    Convention (load-bearing, design review C1): every cost method returns a POSITIVE
+    fraction of the UNDERLYING notional S per contract. Deribit BTC/ETH options are
+    INVERSE (coin-settled); one contract is one unit of underlying and the premium is
+    quoted in coin, so the premium itself is a fraction of S (premium/S = the coin
+    price) and every cost adds coherently on the S base, mirroring `carry.py`'s
+    fraction-of-N. **S is the COST base, NOT the return/capital base.** A short option
+    is margined, not fully funded, so the eventual Sharpe in PR5e must divide the net
+    P&L (a fraction of S) by the MARGIN posted (`initial_margin_fraction * S`), never by
+    S; this field pins that base here so the units cannot drift in PR5e.
+
+    This model costs the SHORT (premium-receiver) side: you sell the option at the bid,
+    pay the option trade fee, statically delta-hedge on the perp, hold to European
+    cash-settlement, pay the delivery fee, and unwind the hedge (design review L2). The
+    long side has the same fee but buys at the ask.
+
+    Conservatism placement (design review): the option entry spread is MEASURED from the
+    chain (the realized bid-vs-mark slippage, a strength over the carry's assumed
+    spread) with an assumed floor for crossed/thin quotes; the delivery fee here is a
+    CEILING (the un-capped flat rate; PR5e charges it ITM-conditional on the actual
+    intrinsic, so the OTM majority that expire worthless pay ~0); the static entry+exit
+    hedge is a FLOOR on the true delta-management cost (the path rehedge between entry
+    and expiry is the dominant UN-modeled term, ADR 0004 caveat 3, a PR5e diagnostic);
+    the perp maker rebate is modeled at 0; financing on the option margin + the hedge
+    margin is deferred to PR5e with the capital base. The Coinbase-routing fee layer is
+    carried as a field at 0 (no published retail schedule yet).
+
+    Fee schedule verified + cited June 2026 (see `source`). `tradeable=False`: US retail
+    cannot directly trade Deribit; the regulated path (Coinbase Financial Markets, CFTC-
+    cleared May 2026) is institutional-live / retail-coming-soon, a binding deploy caveat
+    (the ADR 0001 C1 US-tradeable-venue analogue).
+    """
+
+    name: str
+    tradeable: bool
+    source: str
+    option_fee_bps: float
+    option_fee_premium_cap: float
+    option_delivery_bps: float
+    option_spread_floor_bps: float
+    perp_taker_bps: float
+    perp_maker_bps: float
+    perp_half_spread_bps: float
+    routing_fee_bps: float = 0.0
+    initial_margin_fraction: float = 0.15
+
+    def __attrs_post_init__(self) -> None:
+        if not self.name.strip():
+            raise CostModelError("DeribitOptionCostModel requires a non-empty name")
+        if not self.source.strip():
+            raise CostModelError(
+                f"DeribitOptionCostModel {self.name!r} requires a non-empty source (the "
+                f"cited fee-schedule provenance)"
+            )
+        nonneg = {
+            "option_fee_bps": self.option_fee_bps,
+            "option_delivery_bps": self.option_delivery_bps,
+            "option_spread_floor_bps": self.option_spread_floor_bps,
+            "perp_taker_bps": self.perp_taker_bps,
+            "perp_maker_bps": self.perp_maker_bps,
+            "perp_half_spread_bps": self.perp_half_spread_bps,
+            "routing_fee_bps": self.routing_fee_bps,
+        }
+        for field_name, value in nonneg.items():
+            if value < 0.0:
+                raise CostModelError(
+                    f"DeribitOptionCostModel {self.name!r} requires {field_name} >= 0; got {value}"
+                )
+        if not (0.0 <= self.option_fee_premium_cap <= 1.0):
+            raise CostModelError(
+                f"DeribitOptionCostModel {self.name!r} requires option_fee_premium_cap in "
+                f"[0, 1] (a fraction of premium); got {self.option_fee_premium_cap}"
+            )
+        if not (0.0 < self.initial_margin_fraction <= 1.0):
+            raise CostModelError(
+                f"DeribitOptionCostModel {self.name!r} requires initial_margin_fraction in "
+                f"(0, 1]; got {self.initial_margin_fraction}"
+            )
+
+    def option_trade_fee_fraction(self, premium_fraction: float) -> float:
+        """The option trade fee (charged once, on entry), as a fraction of S.
+
+        `min(option_fee_bps/1e4, option_fee_premium_cap * premium_fraction)`, the Deribit
+        `min(0.03% of underlying, 12.5% of premium)` rule (maker == taker for options).
+        `premium_fraction` is the EXECUTED premium in coin terms (= premium/S); pass the
+        BID for a short sale so the fee is on the same premium as the cash inflow.
+
+        Raises:
+          CostModelError: when `premium_fraction < 0`.
+        """
+        if premium_fraction < 0.0:
+            raise CostModelError(
+                f"option_trade_fee_fraction requires premium_fraction >= 0; got {premium_fraction}"
+            )
+        return min(self.option_fee_bps / _BPS, self.option_fee_premium_cap * premium_fraction)
+
+    def option_delivery_fee_fraction(self) -> float:
+        """A CEILING on the settlement delivery fee, fraction of S (the un-capped flat
+        `option_delivery_bps`). PR5e replaces it with the ITM-conditional charge
+        `min(option_delivery_bps/1e4, 0.125 * intrinsic/S)`, which is ~0 for the OTM
+        majority; this flat ceiling deliberately over-charges (the safe direction)."""
+        return self.option_delivery_bps / _BPS
+
+    def routing_fee_fraction(self) -> float:
+        """The US-access routing layer (Coinbase Financial Markets), fraction of S.
+
+        Carried at 0 pending a published retail routing schedule, so the model is a cost
+        FLOOR for the future US-retail-accessible path (design review M1)."""
+        return self.routing_fee_bps / _BPS
+
+    def option_spread_floor_fraction(self) -> float:
+        """The assumed minimum option entry-spread cost, fraction of S (a conservative
+        floor that also catches a crossed/stale quote where mark <= bid)."""
+        return self.option_spread_floor_bps / _BPS
+
+    def hedge_side_cost_fraction(self, abs_delta: float, *, taker: bool) -> float:
+        """One side (entry OR exit) of the perp delta hedge on `|delta| * S` notional, as
+        a fraction of S. The maker rebate is modeled at 0 (conservative).
+
+        Raises:
+          CostModelError: when `abs_delta < 0`.
+        """
+        if abs_delta < 0.0:
+            raise CostModelError(
+                f"hedge_side_cost_fraction requires abs_delta >= 0; got {abs_delta}"
+            )
+        fee = self.perp_taker_bps if taker else self.perp_maker_bps
+        return abs_delta * (fee + self.perp_half_spread_bps) / _BPS
+
+    def hedge_round_trip_fraction(
+        self, abs_delta: float, *, entry_taker: bool = True, exit_taker: bool = True
+    ) -> float:
+        """The hedge entry + exit cost (a FLOOR; the path rehedge is un-modeled), frac of S.
+
+        Equals `hedge_side_cost_fraction(entry) + hedge_side_cost_fraction(exit)` by
+        construction (pinned by a test)."""
+        return self.hedge_side_cost_fraction(abs_delta, taker=entry_taker) + (
+            self.hedge_side_cost_fraction(abs_delta, taker=exit_taker)
+        )
+
+
+DERIBIT_OPTION = DeribitOptionCostModel(
+    name="deribit_option",
+    # US retail cannot directly trade Deribit; the Coinbase Financial Markets path (CFTC-
+    # cleared May 2026) is institutional-live / retail-coming-soon, so False today.
+    tradeable=False,
+    option_fee_bps=3.0,  # 0.03% of the underlying index (maker == taker for options)
+    option_fee_premium_cap=0.125,  # the fee is capped at 12.5% of the option premium
+    option_delivery_bps=1.5,  # 0.015% of the underlying (settlement), un-capped ceiling here
+    option_spread_floor_bps=5.0,  # assumed conservative minimum option entry-spread cost
+    # The delta hedge is modeled SAME-VENUE on the Deribit perpetual (the natural hedge
+    # for a Deribit option). Maker rebate (0.025%) dropped to 0 (conservative).
+    perp_taker_bps=5.0,
+    perp_maker_bps=0.0,
+    perp_half_spread_bps=_PERP_HALF_SPREAD_BPS,
+    routing_fee_bps=0.0,
+    initial_margin_fraction=0.15,  # assumed conservative short-option IM pin; PR5e refines
+    source=(
+        "Deribit BTC/ETH options (inverse, coin-settled): trading fee min(0.03% of the "
+        "underlying index, 12.5% of premium), maker == taker (support.deribit.com Fees + "
+        "insights.deribit.com); delivery fee 0.015% of underlying capped at 12.5% of value, "
+        "daily options exempt (support.deribit.com Settlement). Delta-hedge leg on the "
+        "Deribit perpetual: taker 0.05% / maker rebate 0.025% (modeled at 0). US retail "
+        "access via Coinbase Financial Markets (CFTC-cleared May 2026, institutional-live / "
+        "retail-coming-soon); routing_fee carried at 0 pending a published retail schedule. "
+        "initial_margin_fraction is an assumed conservative pin of Deribit's SPAN-style "
+        "short-option IM (PR5e refines per position). Verified 2026-06"
+    ),
+)
+"""The canonical crypto options venue cost model (the only liquid BTC/ETH options book).
+`tradeable=False` reflects current US-retail access; the kill gate reads the flag."""
+
+
 TRADEABLE_VENUES: tuple[VenueCostModel, ...] = (KRAKEN, HYPERLIQUID)
 """The US-tradeable venues the kill gate is decided on."""
 
