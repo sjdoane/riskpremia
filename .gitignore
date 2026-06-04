@@ -109,6 +109,11 @@ runs/
 *.hdf5
 *.duckdb
 *.sqlite
+# SQLite trial registry (run_null_gate.py writes data/null_gate_trials.db at runtime)
+# plus its WAL/shared-memory sidecars; a regenerable runtime artifact, never committed.
+*.db
+*.db-wal
+*.db-shm
 *.zip
 *.csv
 !docs/**/*.csv
