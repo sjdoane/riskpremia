@@ -1,0 +1,29 @@
+name: CI
+
+# Gates every PR (and pushes to main) on the same checks run locally: ruff,
+# mypy --strict over src, and the test suite. The live-exchange tests are marked
+# `network` and skipped here (CI has no business hitting OKX/Binance); they run
+# locally and are the end-to-end reproducibility proof. Deps install from the
+# exact pins in pyproject, so CI exercises the same versions as development.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install (pinned deps + dev + dataops)
+        run: pip install -e ".[dev,dataops]"
+      - name: Ruff
+        run: ruff check src tests
+      - name: Mypy (strict, src)
+        run: mypy
+      - name: Pytest (network tests skipped)
+        run: pytest -q -m "not network"
