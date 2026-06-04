@@ -29,7 +29,7 @@ from typing import Any
 import polars as pl
 
 from riskpremia.data.errors import FundingIntervalError, VenueFetchError
-from riskpremia.data.records import FundingRecord
+from riskpremia.data.records import FundingRecord, MarkPriceRecord, SpotPriceRecord
 
 # UTC (datetime.UTC, the stdlib singleton) is the single timezone the whole layer
 # normalizes to; crypto trades 24/7 with no market calendar.
@@ -231,6 +231,47 @@ def funding_interval_diagnostics(frame: pl.DataFrame) -> dict[str, float]:
         "median_gap_hours": median_gap,
         "mismatch_fraction": mismatch_fraction,
     }
+
+
+def marks_frame(records: Sequence[MarkPriceRecord]) -> pl.DataFrame:
+    """Build the perp-mark price frame (`period_end_ts`, `mark_close`) for the join.
+
+    Deduped on `period_end_ts` (the as-of join precondition) and sorted; the
+    Decimal mark price is cast to Float64 here, the documented price cast site.
+    """
+    if len(records) == 0:
+        return pl.DataFrame(schema={"period_end_ts": DT_DTYPE, "mark_close": pl.Float64})
+    frame = pl.DataFrame(
+        {
+            "period_end_ts": [r.period_end_ts for r in records],
+            "mark_close": [float(r.mark_close) for r in records],
+        },
+        schema={"period_end_ts": DT_DTYPE, "mark_close": pl.Float64},
+    )
+    return frame.unique(
+        subset=["period_end_ts"], keep="last", maintain_order=True
+    ).sort("period_end_ts")
+
+
+def spot_frame(records: Sequence[SpotPriceRecord]) -> pl.DataFrame:
+    """Build the spot reference frame (`period_end_ts`, `close`) for the join.
+
+    Deduped on `period_end_ts` and sorted; same single Float64 cast. The matched
+    `(spot_venue, spot_symbol, quote)` provenance lives on the records; this frame
+    carries only what the basis computation needs.
+    """
+    if len(records) == 0:
+        return pl.DataFrame(schema={"period_end_ts": DT_DTYPE, "close": pl.Float64})
+    frame = pl.DataFrame(
+        {
+            "period_end_ts": [r.period_end_ts for r in records],
+            "close": [float(r.close) for r in records],
+        },
+        schema={"period_end_ts": DT_DTYPE, "close": pl.Float64},
+    )
+    return frame.unique(
+        subset=["period_end_ts"], keep="last", maintain_order=True
+    ).sort("period_end_ts")
 
 
 def build_observation_frame(

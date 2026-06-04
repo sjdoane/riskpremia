@@ -9,3 +9,5 @@
 *.toml text eol=lf
 artifacts/**/*.json text eol=lf
 data/snapshots/manifest.toml text eol=lf
+# committed test-fixture zip is hash-critical: never normalize it
+*.zip binary

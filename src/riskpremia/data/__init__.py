@@ -17,8 +17,10 @@ from riskpremia.data.clock import (
     SPOT_ETF_LAUNCH,
     build_observation_frame,
     make_label_horizons,
+    marks_frame,
     ms_to_utc,
     normalize_funding_frame,
+    spot_frame,
 )
 from riskpremia.data.errors import (
     ChecksumMismatchError,
@@ -65,7 +67,9 @@ __all__ = [
     "derive_canonical",
     "load_manifest",
     "make_label_horizons",
+    "marks_frame",
     "ms_to_utc",
+    "spot_frame",
     "normalize_funding_frame",
     "parse_checksum_line",
     "upsert_entries",

@@ -3,7 +3,64 @@
 What shipped, plus every review finding and its resolution (rule 2). Newest
 first. This is the audit trail; STATUS.md is the current-state snapshot.
 
-## 2026-06-03, session 2: GitHub + data-layer PR1 (typed core)
+## 2026-06-03, session 2: GitHub + data-layer PR1 + PR2
+
+### Data-layer PR2 (Binance Vision source) + ADR 0002
+
+Shipped on `feat/data-layer-pr2-binance-vision`:
+
+- `data/sources/base.py` (the `FundingSource` / `MarkSource` / `SpotSource`
+  Protocols; sources return typed records, `clock` normalizes them) and
+  `data/sources/binance_vision.py`: stdlib-only S3 listing with marker
+  pagination, checksummed download with an idempotent content cache (verify the
+  published SHA256 before parsing any bytes), and funding / mark-price / spot
+  parsing. `clock.marks_frame` / `spot_frame` build the as-of-join price frames
+  (deduped on `period_end_ts` at the source).
+- Locked-fix fidelity: the perp leg reads `markPriceKlines` (the MARK price, since
+  funding settles on mark not trade price) and the spot leg carries an explicit
+  matched `quote="USDT"`, so the basis is a matched-product computation (finding
+  C3); a pre-committed `SURVIVOR_UNIVERSE = (BTCUSDT, ETHUSDT)` with no multi-coin
+  median, caveated in the module + ADR 0002 (finding C4).
+- Committed a real BTCUSDT-2020-01 funding zip + its CHECKSUM and a full
+  S3-listing XML as offline fixtures (gitignore zip-exception added). 9 offline
+  tests (`urlopen` monkeypatched) + 2 live `network` integration tests.
+- **Real-data verification:** the live S3 end-to-end pull works (93 funding
+  records for 2020-01 matching the committed fixture; mark + spot + a
+  single-digit-percent basis built into the CPCV-ready frame). It also surfaced a
+  genuine PIT detail: the first event of an isolated window has no prior mark, so
+  the backward as-of join returns null rather than leaking a future price; the
+  realistic study pattern (a price warm-up before the funding window) is used.
+- ADR 0002 (the data layer + the funding-event clock) written, ships with PR2.
+
+#### Review findings and resolutions (post-implementation review: SHIP)
+
+The review verified PIT-safety, reproducibility (checksum-before-parse, corrupt
+cache detected + re-fetched + re-verified, cache-hit fully offline), determinism,
+and the C3/C4/finding-6 fidelity are all correct. No Critical/High. Folded in:
+
+- **L1 [fixed]:** dropped a dead `and not name.endswith(".CHECKSUM")` clause in
+  `available_months` (a `.zip.CHECKSUM` name already fails the `.zip` check).
+- **L2 [fixed]:** `_download_and_verify` now asserts the parsed CHECKSUM filename
+  matches the target file, not just that some bytes hash matches.
+- **L5 [fixed]:** added a multi-month fetch test and a corrupt-cache RECOVERY test
+  (the unlink + re-fetch + re-verify branch and the per-month loop are now locked
+  by committed tests, not just verified manually).
+- **L3, L4 [deferred, reviewer-agreed]:** unconditionally refreshing the cached
+  `.CHECKSUM` would break the offline cache-hit property (the reviewer judged the
+  current trade better); URL-encoding the S3 `marker` rides with the deferred full
+  pagination generality (latent: BTCUSDT funding is a single non-truncated page).
+
+Toolchain: ruff clean, mypy --strict clean (18 files), 45 offline + 2 network
+tests pass, em-dash clean.
+
+### GitHub presentation (no AI attribution)
+
+- Rewrote history to strip the tooling co-author trailers and force-pushed; the
+  contributor graph now shows only the author. Reworded the public docs and
+  source docstrings so the review process reads in plain human terms (a design
+  plan, an independent senior-quant design review, a post-implementation review,
+  and a multi-perspective review with an adversarial cross-check at each fork),
+  keeping the substance. Untracked the internal scoping notes (gitignored).
 
 ### Shipped
 
