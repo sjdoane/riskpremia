@@ -5,16 +5,21 @@
 # have byte-identical inputs before regenerating any derived artifact. Raw
 # bytes are gitignored; this manifest and the derived artifacts are committed.
 #
-# Populated during the data-layer milestone (ADR TBD). Schema (per entry):
+# Read/written by src/riskpremia/data/manifest.py (load_manifest / upsert_entries
+# / verify_snapshot). Populated by scripts/fetch_funding.py during the data-layer
+# fetch milestone (PR2+). Schema (per entry, matching SnapshotEntry):
 #
 # [[snapshot]]
-# name        = "binance-vision-fundingRate-BTCUSDT-2020-01..2026-05"
-# venue       = "binance-vision"          # binance-vision | okx | hyperliquid
-# instrument  = "BTCUSDT"
-# kind        = "funding_rate"            # funding_rate | klines
-# source_url  = "https://data.binance.vision/..."
-# fetched_utc = "2026-06-..."
-# sha256      = "..."
-# rows        = 0
+# name               = "binance-vision-fundingRate-BTCUSDT-2020-01"
+# venue              = "binance_vision"     # binance_vision | okx | hyperliquid
+# instrument         = "BTCUSDT"
+# kind               = "funding_rate"       # funding_rate | klines | spot
+# relpath            = "binance_vision/BTCUSDT/BTCUSDT-fundingRate-2020-01.zip"
+# source_url         = "https://data.binance.vision/..."
+# fetched_utc        = 2026-06-03T00:00:00+00:00
+# sha256             = "..."                # ours, over the on-disk bytes
+# size_bytes         = 825
+# rows               = 93                   # optional, parsed record count
+# published_checksum = "..."               # optional, the vendor's own SHA256
 
 # (empty until the first pull)
