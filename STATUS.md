@@ -22,10 +22,10 @@ the cost model + a random-entry null first).
 - A unanimous 4-member council (Realist/Quant/Builder/Growth, all HIGH
   confidence) and an endorse-with-caveats verifier backed Track B. Full record
   in `docs/decisions/0001-lead-track-selection.md`.
-- **One open question escalated to the user (non-blocking):** the career target.
-  Track A is promoted ONLY if the user confirms BOTH a pure options/vol-desk
-  target AND a verified live OptionMetrics entitlement. Otherwise Track A stays
-  the "also examined" contrast section.
+- **Career-target fork RESOLVED (2026-06-03):** asked, and the user deferred to
+  the agent's judgment ("make the decision"). Track B is LOCKED. Framing default:
+  broad / systematic / reproducibility-first (the Track-B-optimal audience). No
+  WRDS/OptionMetrics chase; Track A stays the "also examined" contrast section.
 
 ## Spike findings (2026-06-03, US IP)
 
@@ -68,22 +68,33 @@ REAL-MONEY deployment:
 
 ## Next (in order)
 
-1. **ADR 0002 + data-layer milestone.** Multi-venue fetchers (Binance Vision S3
-   long history + OKX live + Hyperliquid), SHA256 snapshot manifest, a typed
-   funding/kline record contract, the funding-event clock. Plan -> Plan-reviewer
-   -> implement -> post-impl reviewer.
-2. **Cost model FIRST (ADR 0003), parameterised to a US-tradeable venue**
-   (taker/maker fees + both-leg spread + funding + short-term tax), then run a
-   RANDOM-ENTRY NULL through it before any signal. This is also the early
-   economic kill gate.
-3. Only then: the carry signal + the risk-OFF regime circuit breaker; event-time
+The data-layer milestone is PLANNED and Plan-REVIEWED (design locked in
+`docs/research/0001-data-layer-design.md`; the reviewer probed live data and
+caught a factual error in the OKX gate, plus 4 more Critical/High findings, all
+resolved in that doc). Scope was cut per rule 6 so the cost model is not blocked.
+
+1. **Data-layer PR1 (the reviewable heart, no network):** `data/records.py`,
+   `boundary.py`, `clock.py`, `manifest.py`, a committed tiny BTCUSDT-2020-01
+   fixture, unit tests, and the CPCV-consumes-observation-frame CONTRACT test.
+   Implement -> post-impl reviewer.
+2. **Data-layer PR2:** `binance_vision.py` (BTCUSDT funding + matched MARK + spot)
+   + a `network` live checksum-verify test. Ships ADR 0002.
+3. **Data-layer PR3:** `okx.py` realized-history single fetch + the Binance-vs-OKX
+   funding delta join (for the kill-gate venue).
+4. **Cost model (ADR 0003), parameterised to a US-tradeable venue** (taker/maker
+   fees + both-leg spread + funding + short-term tax), then run a RANDOM-ENTRY
+   NULL through it before any signal. This is also the early economic kill gate.
+5. Only then: the carry signal + the risk-OFF regime circuit breaker; event-time
    CPCV glue; capacity curve; break-even-cost exhibit; regime decomposition;
    committed artifact + figures.
 
+Deferred from the data layer (not on the critical path to the first kill-gate
+number): Hyperliquid source, OKX retention-probe machinery, multi-coin universe,
+full S3 pagination generality.
+
 ## Deferred / open
 
-- Career-target confirmation from the user (gates the A-vs-B final lock; build
-  proceeds on B meanwhile).
+- Career-target fork RESOLVED (user deferred to agent judgment; Track B locked).
 - A US-tradeable execution venue must be chosen for the cost model (candidates:
   Kraken, Coinbase, CME micro futures, Hyperliquid). Decide in the cost-model
   ADR with real fee schedules.
