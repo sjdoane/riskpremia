@@ -32,3 +32,13 @@ class CarryComputationError(ExecutionError):
     a null price at the entry or exit event (a data gap must surface loudly, not
     silently produce a garbage delta-neutral return).
     """
+
+
+class ScoringError(ExecutionError):
+    """A deflated-Sharpe / null-gate scoring step could not be performed correctly.
+
+    Raised on a degenerate return series (fewer than two observations or a zero
+    standard deviation, where the Sharpe and the moments are undefined), or on a
+    CPCV embargo that cannot be made to cover the holding horizon. A NaN-returning
+    scorer would silently produce a meaningless kill number, so these raise.
+    """

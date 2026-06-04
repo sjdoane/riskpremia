@@ -3,7 +3,108 @@
 What shipped, plus every review finding and its resolution (rule 2). Newest
 first. This is the audit trail; STATUS.md is the current-state snapshot.
 
-## 2026-06-03, session 3: the kill gate, PR4a (the per-trade P&L math)
+## 2026-06-03, session 3: the kill gate (PR4a per-trade math + PR4b the first kill number)
+
+### The null + the first net-of-cost kill number (PR4b) on `feat/cost-model-pr4b-null-gate`
+
+The second half of the kill gate: the random-entry null, the deflated-Sharpe
+scoring, the reported exhibits, and the first net-of-cost number. Shipped:
+
+- `strategy/null.py`: the entry-selection nulls (always-on, non-overlapping strided
+  by H, seeded random subset), all drawn from `valid_entry_range`.
+- `execution/scoring.py`: `return_moments`, `psr_zero` (the kill number = PSR(0) at
+  the pre-signal `n_effective=1`), the lumpy/amortised `per_interval_series`,
+  `effective_sample_size` (the block-deflated honest T), and `make_purged_cpcv` (the
+  embargo>=H glue derived from the integer horizon).
+- `execution/exhibit.py`: `early_gate`, `headline_score` (per-trade non-overlapping
+  PSR(0) across all H phases + the lumpy/amortised diagnostic + the PW iid check),
+  `funding_sign_regime`, `after_tax_sidebar`, and `gate_surface` / `is_killed`.
+- `scripts/run_null_gate.py`: fetches the held-out post-ETF BTCUSDT frame and prints
+  the venue x H x capital-multiple surface + the verdict.
+- Data-layer fix (found by running the gate on the full window): Binance Vision
+  switched its KLINE timestamps from milliseconds to MICROSECONDS in the late-2024
+  dumps (the funding dumps stayed ms); `_kline_close_time_to_ms` normalizes both and
+  rejects anything else. Plus a `py.typed` marker so the package types resolve for
+  the script.
+
+**The first net-of-cost kill number (live Binance Vision, BTCUSDT 2024-01-11 to
+2026-05-31, 2616 funding events): KILL.** Net-of-cost Deflated Sharpe (PSR(0)) =
+0.0000 on every tradeable venue (Kraken, Hyperliquid) at every horizon (H in
+1..189) at the conservative 2N capital charge; the round-trip cost (about 69 bps
+Kraken) dwarfs the median funding (0.6 bps at H=1 to 89 bps at H=189) at every
+horizon, and the 2N financing opportunity cost (about 8%/yr) roughly equals the
+funding (about 5.7%/yr) so the carry barely breaks even even before trading costs.
+The bracket holds: at the favourable 1N capital charge every tradeable cell still
+fails the 0.95 bar (the closest is the non-tradeable reference venue at a 63-day
+hold, DSR 0.60). The naive always-on / random-entry carry is non-viable for
+real-money deployment; any edge must come from selection, which raises the bar.
+This is the honest pre-registered null. 96 offline + 8 network tests; mypy --strict
+26 files + the script; ruff + em-dash clean.
+
+#### Design review findings and resolutions (senior-quant design review: APPROVE-WITH-CHANGES, 3 Critical + 3 High)
+
+The review ran experiments against the actual vendored `sharpe.py` / `bootstrap.py`.
+All resolved before implementing (ADR 0003 amendments B1 to B7):
+
+- **C1 [fixed, B1]:** the claim that lumpy cost lowers the DSR via the skew/kurtosis
+  penalty is backwards (for a negative-mean series the tail term can RAISE it); the
+  real mechanism is per-interval variance inflation. Resolution: the kill reads the
+  empirical `min(lumpy, amortised)`, not an assumption, pinned by a test.
+- **C2 [fixed, B2]:** findings 2 and 9 named different series (per-interval lumpy vs
+  per-trade non-overlapping) whose DSR differs by more than the threshold.
+  Resolution: declare the per-trade non-overlapping net series THE headline
+  (cost-placement-invariant); the per-interval pair is a diagnostic; kill reads the
+  min.
+- **C3 [fixed, B3]:** the lumpy/amortised distinction is vacuous on the always-on
+  book (uniform cost in steady state). Resolution: each exhibit scoped to its null
+  (early gate / sign regime / contamination on always-on; headline DSR + lumpy on
+  non-overlapping).
+- **H1 [fixed, B4]:** the embargo derived from a float `H/n` can floor to `H-1` and
+  spuriously abort. Resolution: `embargo_pct = max(0.05, (H+0.5)/n)`, then assert
+  `_embargo_count >= H`, with a test over the float-edge cases (79,21) and (55,7).
+- **H2 [fixed, B4]:** dressing the pre-signal number as "OOS under CPCV" is
+  dishonest (no fitting -> CPCV is degenerate). Resolution: framed as the
+  full-sample PSR(0) on the held-out post-ETF REGIME; the CPCV is wired +
+  embargo-asserted but explicitly degenerate until a signal exists.
+- **H3 [fixed, B5]:** the venue x H grid is an un-deflated CONTROL set. Resolution:
+  recorded under one control family at `naive_effective_n=1` -> PSR(0); the kill
+  reads tradeable cells; the trigger that ends the PSR(0) regime is documented.
+- Resolved highs/mediums: financing reported at BOTH `capital_multiple` 2.0 and 1.0
+  with the verdict bracketed (B6, distinguishing the owned-spot OPPORTUNITY cost
+  from a borrow cost); the non-overlapping DSR across all H phases with the PW iid
+  check (M3); `scoring.py` is a PR4b module (B7).
+
+#### Post-implementation review findings and resolutions (senior-quant post-impl review: FIX-THEN-SHIP, 2 High)
+
+The review reproduced the kill numbers from first principles and confirmed the KILL
+is SOUND (not a false kill; the cm=1 floor is round-trip-cost-dominated). Resolved:
+
+- **H1 [fixed]:** the headline computed the Politis-White block length (9.68,
+  iid_ok=False on real data: funding-regime persistence makes even strided trades
+  serially dependent) but ignored it, taking T at face value (a false-pass landmine
+  for the signal milestone). Resolution: `psr_zero` deflates T to the block effective
+  sample size `floor(T/block)`; `effective_t` + the block length are reported; pinned
+  by a test.
+- **H2 [fixed]:** ADR B2 wrongly claimed the strided series is near-iid (PW<=1).
+  Resolution: corrected the B2 text to acknowledge PW~9.7 on the real data and that
+  the T-deflation is what restores honesty.
+- **M3 [fixed]:** `gate_surface` admitted a short frame that `headline_score` then
+  rejected (a crash). Resolution: skip a cell unless `height > 2H`.
+- **M4 [fixed]:** the trial-registry rows recorded normal moments, so they could not
+  reproduce the per-trade DSR. Resolution: record the realized phase-0 per-trade
+  moments + the block-deflated effective T; the authoritative dsr_kill rides in the
+  metadata.
+- Presentation [fixed]: the after-tax sidebar summed the overlapping always-on batch
+  (a meaningless aggregate); it now uses the non-overlapping (deployable) series.
+
+#### Verification (against real data, not just fixtures)
+
+The kill gate runs end-to-end on the live Binance Vision post-ETF window (the
+microsecond-kline fix was discovered and fixed precisely because the full window
+exercised the late-2024 us-stamped dumps). The funding-sign regime is 84% positive
+(the short collects) / 16% negative; price_pnl contamination ratio is 0.001 (the
+static-notional proxy is not padding the carry); batch-vs-scalar parity holds on the
+real frame. The verdict reproduces deterministically.
 
 ### Cost model + per-trade carry P&L (PR4a) shipped on `feat/cost-model-pr4a-per-trade-pnl`
 

@@ -213,12 +213,99 @@ the implementation follows the amendment where the two differ.
   flags the kill number contaminated, because the proxy's bias is one-sided
   (short gamma on the basis), not just noisy.
 
+## PR4b amendment (the design review of the null + the scoring)
+
+The PR4b design review ran experiments against the actual vendored `sharpe.py` /
+`bootstrap.py` and corrected the DSR construction and the honest framing of the
+pre-signal kill number. These amendments govern the implementation.
+
+- **B1 (the lumpy-cost mechanism, correcting finding 2).** Finding 2 claimed lumpy
+  cost lowers the DSR by fattening the skew/kurtosis the `_sigma_sq` term
+  penalises. That mechanism is WRONG: for a negative-mean series the
+  `1 - gamma_3*SR` term with negative skew can RAISE the DSR, so the tail penalty
+  is second-order and can flip sign. The real reason lumpy is less favourable is
+  that lumping the round-trip cost into single intervals inflates the per-interval
+  return VARIANCE, pulling |SR| toward zero. So the rule is empirical, not
+  assumed: compute BOTH the lumpy and the amortised series and the kill reads
+  `min(DSR_lumpy, DSR_amortised)`. A test pins that the kill reads the min.
+
+- **B2 (THE headline series, reconciling findings 2 and 9).** Findings 2
+  (per-interval lumpy) and 9 (per-trade non-overlapping) name DIFFERENT series
+  whose DSR differs by more than the 0.95 threshold, so the headline must be
+  declared. The headline kill number is the **per-trade non-overlapping net
+  series**: entries strided by H, one observation per independent closed trade's
+  `net_pretax`. It is cost-placement-invariant (a closed trade's net is identical
+  lumpy or amortised) and its skew/kurtosis is the real per-trade tail, not a
+  cost-placement artifact. The per-interval lumpy/amortised pair is a reported
+  DIAGNOSTIC, and the kill reads `min(headline_per_trade, per_interval_lumpy)` so no
+  granularity choice can fake a pass. **Honest-T correction (post-implementation
+  review):** disjoint funding WINDOWS do not make the strided trades independent,
+  because funding-regime persistence spans weeks, so consecutive 7-day-apart trades
+  still share the regime. The realized Politis-White block length on the real
+  post-ETF per-trade series is about 9.7 (NOT near-iid), so `psr_zero` computes the
+  significance on the block-deflated effective sample size `floor(T / block_length)`,
+  not the raw trade count; the block length and the effective T are reported so the
+  deflation is visible. For this null the mean net is so negative that the kill holds
+  either way, but the deflation is the mechanism that keeps T honest for the eventual
+  signal milestone (where an undeflated T would overstate a positive edge).
+
+- **B3 (lumpy/amortised is a property of the NON-overlapping null).** On the
+  always-on book the lumpy/amortised distinction is vacuous: in steady state one
+  trade opens and one closes every interval, so the per-interval cost is a full
+  round trip every interval regardless of placement. The lumpy/amortised diagnostic
+  therefore runs on the NON-overlapping null. Each exhibit is scoped to its null:
+  the always-on null drives the early economic gate, the funding-sign-regime
+  decomposition, and the `price_pnl` contamination check; the non-overlapping null
+  drives the headline DSR and the lumpy/amortised diagnostic.
+
+- **B4 (the pre-signal number is full-sample PSR(0) on the held-out regime, NOT
+  "OOS under CPCV").** An always-on (or random, or non-overlapping) carry fits NO
+  parameter, so a CPCV test fold's returns are just a slice of the same
+  unconditional series and the CPCV-DSR equals the full-sample DSR up to
+  subsampling noise. It is therefore dishonest to dress the pre-signal number as
+  "out-of-sample under CPCV." The honest framing: the headline kill number is the
+  full-sample DSR = PSR(0) on the held-out POST-ETF regime (held out in the
+  regime/decay sense, not the CPCV-OOS sense); the event-time-purged CPCV is wired
+  and its embargo is asserted >= H, but it is DEGENERATE for an unconditional carry
+  and becomes load-bearing only once a fitted selection signal exists (a later
+  milestone). The pre-registered "DSR < 0.95 OOS under CPCV" criterion is thus
+  partially evaluable now (full-sample PSR(0) on the post-ETF window) and fully
+  evaluable only at the signal milestone. The embargo is derived from the integer
+  horizon (a float `H / n_obs` can floor to `H - 1`), so the glue computes
+  `embargo_pct = max(0.05, (H + 0.5) / n_obs)` and still asserts
+  `_embargo_count >= H`, which never spuriously aborts on a small frame.
+
+- **B5 (the venue x H grid is an un-deflated CONTROL set).** Every (venue, H) cell
+  is recorded under one CONTROL `strategy_family` at `naive_effective_n = 1` and
+  scored as PSR(0); the kill reads the TRADEABLE-venue cells. The PSR(0) regime
+  ends, and DSR deflation on the frozen grid count activates, the moment any cell
+  would otherwise pass OR a fitted signal is introduced. Each row's metadata carries
+  `(venue, H, spread_basis, capital_multiple)` so the grid can be reconstructed
+  honestly at the signal milestone.
+
+- **B6 (financing is an OPPORTUNITY cost, not a borrow cost; report both capital
+  multiples).** The long spot leg is an OWNED asset bought with cash, not borrowed,
+  so there is no borrow/short-rebate leg (this is NOT the equity-short confound
+  that sank Track A). The 2N charge is the foregone money-market yield on the cash
+  in the spot leg plus the posted perp margin, an opportunity cost. Because a
+  leveraged perp posts less than 1:1 collateral, the true tied-up capital is below
+  2N, so `capital_multiple = 2.0` is conservative. The gate therefore reports the
+  surface at BOTH `capital_multiple = 2.0` (the conservative headline) and `1.0`
+  (the favourable bound) and states which way the verdict moves, so the kill is
+  bracketed, not asserted on the single least-favourable assumption.
+
+- **B7 (scoring.py is a PR4b module).** The PR-split section lists
+  `execution/scoring.py` under PR4a; it ships in PR4b with the null and the
+  exhibit (per STATUS and the implementation order). The PR4a deliverable was the
+  per-trade math only.
+
 ## Status
 
-Accepted. PR4a implements the per-trade math with findings 1, 4, 5, 6 and
-amendments A1 to A3 (the sign fixture, the static-notional signed bound, the
-index-identity invariant, the wall-clock financing term on the 2N base, the
-single-source-of-truth funding window). PR4b implements findings 2, 3, 7, 8, 9,
-10, 11 (lumpy cost, embargo>=H, conservative/measured spread, pre-tax PSR(0)
-headline, non-overlapping T, the control trial family, the sign-regime bucket)
-and produces the first kill number.
+Accepted. PR4a implemented the per-trade math (findings 1, 4, 5, 6; amendments A1
+to A3). PR4b implements findings 2, 3, 7, 8, 9, 10, 11 and amendments B1 to B7
+(the per-trade non-overlapping PSR(0) headline with the lumpy/amortised min
+diagnostic, the embargo>=H glue derived from the integer horizon, the
+conservative/measured spread, the pre-tax headline with an after-tax sidebar, the
+honest full-sample-on-held-out-regime framing, the CONTROL trial family, the
+funding-sign-regime decomposition, and the capital-multiple sensitivity) and
+produces the first net-of-cost kill number.

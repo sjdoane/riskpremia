@@ -24,10 +24,22 @@ from riskpremia.data.records import InstrumentId
 from riskpremia.data.sources.binance_vision import (
     SURVIVOR_UNIVERSE,
     BinanceVisionSource,
+    _kline_close_time_to_ms,
     _month_strings,
 )
 
 _FIXTURES = Path(__file__).resolve().parents[1] / "data"
+
+
+def test_kline_close_time_handles_ms_and_us() -> None:
+    # 2024-06-30 ms stamp passes through; the late-2024 microsecond stamp converts.
+    ms = 1_719_792_000_000  # 2024-07-01 ms
+    assert _kline_close_time_to_ms(ms) == ms
+    us = 1_735_718_399_999_999  # 2024-12-31 23:59:59.999999 us (the format Binance switched to)
+    assert _kline_close_time_to_ms(us) == us // 1000 == 1_735_718_399_999
+    # A seconds stamp (10-digit) or other malformed value raises, never mis-scales.
+    with pytest.raises(VenueFetchError):
+        _kline_close_time_to_ms(1_719_792_000)  # seconds
 _ZIP = _FIXTURES / "BTCUSDT-fundingRate-2020-01.zip"
 _CHECKSUM = _FIXTURES / "BTCUSDT-fundingRate-2020-01.zip.CHECKSUM"
 _S3_XML = _FIXTURES / "s3_listing_btcusdt_funding.xml"
