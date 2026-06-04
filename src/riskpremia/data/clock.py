@@ -44,6 +44,13 @@ SPOT_ETF_LAUNCH = datetime(2024, 1, 11, tzinfo=UTC)
 the pre-ETF / post-ETF regime boundary the decay headline and the held-out kill
 gate split on. Pinned here so no module hardcodes the date independently."""
 
+CRYPTO_ANNUALIZATION_DAYS = 365.0
+"""The single source of truth for the annualization day-count. Crypto trades 24/7
+with no market calendar, and Deribit annualizes DVOL on a 365-day basis (verified:
+the expected daily move is DVOL / sqrt(365)), so the realized-variance estimator
+MUST use the same 365 to match implied (a 252-vs-365 mismatch is a ~1.45x error on
+the variance premium). Both the implied and realized legs read this constant."""
+
 _MS_LOWER = 1_000_000_000_000
 """Epoch-ms lower guard (about 2001-09); a value below this is almost certainly
 seconds, not milliseconds, and is rejected rather than silently mis-scaled."""

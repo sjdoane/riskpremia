@@ -4,30 +4,33 @@ Single source of truth for where Project RiskPremia is and what is deferred.
 Read this FIRST on any new session, then the ADRs it points to. Update after
 every meaningful work block (rule 2).
 
-Last updated: 2026-06-03 (session 3: the kill gate is COMPLETE; PR4a + PR4b shipped, first kill number is an honest NULL).
+Last updated: 2026-06-04 (session 4: PIVOTED to the crypto VRP study (ADR 0004); the measurement floor (PR5a) is built and the first VRP is measured + positive).
 
 ## One-line state
 
-A reproducible, intellectually-honest MEASUREMENT study of the crypto
-perpetual-futures funding-carry risk premium. Lead track LOCKED: **Track B**
-(crypto funding carry, delta-neutral), ADR 0001. Repo:
-https://github.com/sjdoane/riskpremia. **The data layer (PR1+PR2+PR3) and the
-KILL GATE (PR4a per-trade math + PR4b the null + the first kill number) are DONE.**
-**The first net-of-cost number is a decisive, honest NULL: net-of-cost Deflated
-Sharpe (PSR(0)) = 0.0000 on every US-tradeable venue (Kraken, Hyperliquid) at every
-horizon at the conservative 2N capital charge**, and every tradeable cell still
-fails the 0.95 bar even at the favourable 1N charge. The naive always-on /
-random-entry carry is non-viable after costs; any edge must come from selection
-(which raises the bar). PR4a on `feat/cost-model-pr4a-per-trade-pnl`
-(github.com/sjdoane/riskpremia/pull/4), PR4b on `feat/cost-model-pr4b-null-gate`
-(stacked).
+A reproducible, intellectually-honest MEASUREMENT study of crypto risk premia. Study
+1 (the funding carry) was KILLED honestly (the kill gate, on `main`: net-of-cost
+Deflated Sharpe ~0 on every US-tradeable venue/horizon, an honest null). Per the
+pivot-on-failure rule, **the active study is now the crypto VARIANCE RISK PREMIUM
+(VRP), ADR 0004**, in two layers: (i) a reproducible index-level MEASUREMENT (Deribit
+DVOL implied variance minus realized variance from the Binance Vision klines), and
+(ii) a cost-gated short-variance tradeable test, pre-registered as a likely
+cost/peso-bounded null. **Layer i (PR5a) is BUILT** (the DVOL source, the
+realized-variance estimator, the non-overlapping headline). **First measured VRP**
+(BTC, 2022-01..2025-06, 30-day, real data): mean variance premium 0.087, 95%
+bootstrap CI [0.033, 0.119] CLEARING zero (overlap-honest), 70% of days positive,
+pre-ETF 0.101 -> post-ETF 0.059 (a decay paralleling the carry). The VRP is a real,
+positive premium; the open question is whether it survives option-selling costs +
+the peso tail (Layer ii). Repo: https://github.com/sjdoane/riskpremia. PR5a on
+`feat/vrp-dvol-and-measurement`.
 
 ## Dev commands (Windows PowerShell; the venv is run DIRECTLY)
 
 ```
 $env:PYTHONIOENCODING="utf-8"
 $py = "C:\Users\SamJD\.venvs\riskpremia\Scripts\python.exe"
-& $py -m pytest -q                 # 62 pass (offline); never touch the off-limits pit-backtest venvs
+& $py -m pytest -q -m "not network" # 108 pass (offline); never touch the off-limits pit-backtest venvs
+& $py -m pytest -q -m network       # live: Binance Vision + OKX + Deribit DVOL (the real-data proof)
 & $py -m pytest -q -m network      # live-exchange tests (OKX + Binance Vision), skipped in CI
 & $py -m mypy                       # strict, 20 src files
 & $py -m ruff check src tests
@@ -71,7 +74,7 @@ basis** series on the funding-event clock that feeds the vendored
 event-time-purged CPCV directly. Every input is checksum-reproducible (Binance
 Vision) or live-and-keyless (OKX). The whole layer fetches with the STDLIB ONLY.
 
-## The kill gate (ADR 0003): DONE; the result; what is next
+## Study 1 (the funding carry, ADR 0003): KILLED on `main`; Study 2 (the VRP, ADR 0004): the active build
 
 The cost model + the random-entry null are built and run (rule 6 honored: no
 selection signal exists yet). The full locked methodology, the design-review
@@ -88,18 +91,23 @@ funding at every horizon, and the 2N financing (about 8%/yr) roughly equals the
 funding (about 5.7%/yr). KILL: the naive carry is non-viable, the honest null the
 study was always allowed to ship.
 
-**Next session (the gate is done; this is no longer cost-model work):**
-1. Write up the null as the recruiter-facing deliverable: the README results
-   table + the decay/financing-dominance story + the venue cost-sensitivity
-   surface + the figures (matplotlib `figures` extra; commit a regenerable JSON
-   artifact like the sibling project, NOT a parquet/db).
-2. The deferred follow-ups (ADR 0003): replace the conservative assumed spread with
-   the MEASURED median from the free Binance Vision `bookTicker` dataset; the
-   capacity curve (order-book-walk impact, the size where net edge crosses zero).
-3. ONLY IF pursuing deployment: a selection / regime-OFF signal, which now must
-   clear a RAISED bar (it has to beat this null after costs AND survive the
-   multiple-testing deflation the trial registry is already accumulating). A
-   genuine fork -> a four-lens review + an adversarial cross-check before building.
+**The active study is the VRP (ADR 0004); the carry above is the killed Study 1.**
+Layer i (PR5a, branch `feat/vrp-dvol-and-measurement`) is built and the first VRP is
+measured + positive (see the one-line state). VRP modules: `data/sources/deribit_dvol.py`,
+`vrp/realized.py` (the matched-horizon variance-swap RV), `vrp/measurement.py`
+(`build_vrp_frame` + `vrp_headline`, the non-overlapping strided headline). Next steps:
+1. The committed Layer-i ARTIFACT + figures: a regenerable JSON of the VRP measurement
+   (the headline table + the regime decomposition) + matplotlib figures (the DVOL-vs-RV
+   series, the pre/post-ETF decay). GATING (PR5a review M1): SHA256-stamp the DVOL snapshot
+   into `manifest.toml` + commit a DVOL CSV fixture BEFORE the number is quoted as a
+   reproducible headline (DVOL is live/as-of/mutable, unlike the immutable Binance dumps).
+2. Layer ii (the tradeable test), cost-model-FIRST per rule 6: the Tardis monthly-chain loader
+   (the only greenfield surface, ~1GB/day so stream + extract the ATM snapshot) + the
+   delta-hedged-option cost model (extend `execution/cost.py`'s `VenueCostModel`) + the
+   short-variance random-entry null + the cost/peso-bounded gate. Headline stays the
+   measurement + the regime tail table, NEVER a short-vol Sharpe (ADR 0004 caveats).
+3. The Study-1 (carry) write-up (README results + figures) is the OPTIONAL deferred
+   deliverable; the pivot took priority per Sam's directive.
 
 ## Pre-registered kill criterion (frozen UPFRONT; ADR 0001)
 
