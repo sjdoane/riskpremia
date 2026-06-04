@@ -20,6 +20,12 @@ dependencies = [
     "numpy==1.26.4",
     "pydantic==2.9.2",
     "attrs==24.2.0",
+    # tzdata supplies the IANA tz database that Python's stdlib zoneinfo lacks on
+    # Windows; polars needs it to resolve the "UTC" tz string when materializing
+    # the tz-aware funding-event timestamps (without it, to_list() panics with
+    # ZoneInfoNotFoundError). The event clock is always UTC, so the tz-rule
+    # version is immaterial to results; pinned for reproducibility regardless.
+    "tzdata==2026.2",
 ]
 
 [project.optional-dependencies]

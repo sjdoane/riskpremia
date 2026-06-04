@@ -4,14 +4,21 @@ Single source of truth for where Project RiskPremia is and what is deferred.
 Read this first on any new session. Update after every meaningful work block
 (rule 2).
 
-Last updated: 2026-06-03 (session 1, scaffold + week-1 spike).
+Last updated: 2026-06-03 (session 2, data-layer PR1).
 
 ## One-line state
 
-Scaffold is up and the week-1 data-access spike is DONE. Lead track decided:
-**Track B (crypto perpetual-futures funding carry, delta-neutral), framed as a
-measurement study.** No strategy logic written yet (correct: the rules require
-the cost model + a random-entry null first).
+Lead track LOCKED: **Track B (crypto perpetual-futures funding carry,
+delta-neutral), framed as a measurement study.** Repo is on GitHub
+(https://github.com/sjdoane/riskpremia, main pushed). Data-layer **PR1 (typed
+core) is done**: implemented, green (mypy --strict 15 files, ruff, 36 tests,
+em-dash all clean), and post-impl reviewed (FIX-THEN-SHIP; 1 High + 4 Low all
+addressed). On branch `feat/data-layer-pr1-typed-core`, ready to open the PR. No
+strategy logic yet (correct: cost model + random-entry null first).
+
+GOTCHA (Windows, load-bearing): polars needs the `tzdata` package to resolve the
+"UTC" tz string when materializing tz-aware datetimes (pinned `tzdata==2026.2` in
+core deps); without it `to_list()` panics with ZoneInfoNotFoundError.
 
 ## Lead-track decision (locked in ADR 0001)
 
@@ -73,12 +80,13 @@ The data-layer milestone is PLANNED and Plan-REVIEWED (design locked in
 caught a factual error in the OKX gate, plus 4 more Critical/High findings, all
 resolved in that doc). Scope was cut per rule 6 so the cost model is not blocked.
 
-1. **Data-layer PR1 (the reviewable heart, no network):** `data/records.py`,
-   `boundary.py`, `clock.py`, `manifest.py`, a committed tiny BTCUSDT-2020-01
-   fixture, unit tests, and the CPCV-consumes-observation-frame CONTRACT test.
-   Implement -> post-impl reviewer.
+1. ~~Data-layer PR1 (typed core + CPCV contract test).~~ DONE + reviewed; open
+   the PR, then continue.
 2. **Data-layer PR2:** `binance_vision.py` (BTCUSDT funding + matched MARK + spot)
-   + a `network` live checksum-verify test. Ships ADR 0002.
+   + a `network` live checksum-verify test. Ships ADR 0002. Inherits the PR2
+   carry-overs from the reviews: pre-committed BTC/ETH survivor universe, the
+   matched-mark-vs-spot basis, dedup price frames at the source (post-impl L4),
+   the clamp-incidence diagnostic.
 3. **Data-layer PR3:** `okx.py` realized-history single fetch + the Binance-vs-OKX
    funding delta join (for the kill-gate venue).
 4. **Cost model (ADR 0003), parameterised to a US-tradeable venue** (taker/maker
