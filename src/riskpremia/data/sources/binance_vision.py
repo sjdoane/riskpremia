@@ -57,6 +57,36 @@ _S3_NS = "{http://s3.amazonaws.com/doc/2006-03-01/}"
 _KLINE_CLOSE_IDX = 4
 _KLINE_CLOSE_TIME_IDX = 6
 
+# Binance Vision kline dumps switched their open_time / close_time from epoch
+# MILLISECONDS (13-digit) to epoch MICROSECONDS (16-digit) in the late-2024 monthly
+# files, while the fundingRate dumps stayed in milliseconds. The kline parser
+# normalizes to ms so the millisecond-strict `ms_to_utc` chokepoint is unchanged.
+_KLINE_MS_LOW = 1_000_000_000_000  # 1e12: 13-digit epoch ms (about 2001-09 onward)
+_KLINE_MS_HIGH = 10_000_000_000_000  # 1e13: upper bound of 13-digit ms (about 2286)
+_KLINE_US_LOW = 1_000_000_000_000_000  # 1e15: 16-digit epoch us
+_KLINE_US_HIGH = 10_000_000_000_000_000  # 1e16: upper bound of 16-digit us
+
+
+def _kline_close_time_to_ms(raw: int) -> int:
+    """Normalize a Binance Vision kline close_time to epoch milliseconds.
+
+    Accepts the 13-digit millisecond stamp (older dumps) and the 16-digit
+    microsecond stamp (late-2024 onward), converting microseconds by integer
+    division. Anything else (a seconds stamp or a malformed value) raises rather
+    than silently mis-scaling the price-leg timestamp.
+
+    Raises:
+      VenueFetchError: when `raw` is neither a 13-digit ms nor a 16-digit us epoch.
+    """
+    if _KLINE_MS_LOW <= raw < _KLINE_MS_HIGH:
+        return raw
+    if _KLINE_US_LOW <= raw < _KLINE_US_HIGH:
+        return raw // 1000
+    raise VenueFetchError(
+        f"kline close_time {raw} is neither a 13-digit epoch-ms nor a 16-digit epoch-us "
+        f"value; Binance Vision klines are ms before about 2024-12 and us after"
+    )
+
 
 def _month_strings(start: datetime, end: datetime) -> list[str]:
     """The `YYYY-MM` periods overlapping the half-open window `[start, end)`."""
@@ -203,7 +233,8 @@ class BinanceVisionSource:
         for r in csv.reader(StringIO(self._read_single_member(path))):
             if not r or not r[0].lstrip("-").isdigit():
                 continue  # skip a header row (newer Binance Vision klines carry one)
-            out.append((int(r[_KLINE_CLOSE_TIME_IDX]), Decimal(r[_KLINE_CLOSE_IDX])))
+            close_ms = _kline_close_time_to_ms(int(r[_KLINE_CLOSE_TIME_IDX]))
+            out.append((close_ms, Decimal(r[_KLINE_CLOSE_IDX])))
         return out
 
     # ----- public fetch -----------------------------------------------------
