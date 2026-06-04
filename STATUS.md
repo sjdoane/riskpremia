@@ -4,7 +4,7 @@ Single source of truth for where Project RiskPremia is and what is deferred.
 Read this FIRST on any new session, then the ADRs it points to. Update after
 every meaningful work block (rule 2).
 
-Last updated: 2026-06-04 (session 4: PIVOTED to the crypto VRP study (ADR 0004); the measurement floor (PR5a) is built and the first VRP is measured + positive; PR5b shipped the committed measurement artifact + figures + the DVOL/spot reproducibility-fixture manifest stamp; PR5c shipped the Tardis Deribit option-chain loader; PR5d shipped the delta-hedged-option cost model, cost-model-first).
+Last updated: 2026-06-04 (session 4: PIVOTED to the crypto VRP study (ADR 0004); the measurement floor (PR5a) is built and the first VRP is measured + positive; PR5b shipped the committed measurement artifact + figures + the DVOL/spot reproducibility-fixture manifest stamp; PR5c shipped the Tardis Deribit option-chain loader; PR5d shipped the delta-hedged-option cost model; PR5e shipped the per-trade short-variance option P&L with the inverse coin settlement that makes the crash tail honest).
 
 ## One-line state
 
@@ -29,7 +29,7 @@ the peso tail (Layer ii). Repo: https://github.com/sjdoane/riskpremia. PR5a on
 ```
 $env:PYTHONIOENCODING="utf-8"
 $py = "C:\Users\SamJD\.venvs\riskpremia\Scripts\python.exe"
-& $py -m pytest -q -m "not network" # 154 pass (offline); never touch the off-limits pit-backtest venvs
+& $py -m pytest -q -m "not network" # 163 pass (offline); never touch the off-limits pit-backtest venvs
 & $py -m pytest -q -m network       # live: Binance Vision + OKX + Deribit DVOL + Tardis (the real-data proof)
 & $py -m mypy                       # strict, src + scripts
 & $py -m ruff check src tests scripts
@@ -75,7 +75,11 @@ matplotlib, render-only; CI installs only `.[dev]` and skips the figure render t
   delta-hedged short-option transaction cost model (cited Deribit fees + the option
   bid-ask + the perp delta-hedge leg), fraction-of-underlying-S, `tradeable=False` (US
   retail access via Coinbase FM is institutional-now / retail-coming-soon).
-- 154 offline + 12 live `network` tests (the figure render test runs locally, skipif
+- `execution/options.py` `simulate_option_trade` + `OptionTradePnL` (PR5e): the per-trade
+  short-variance P&L in COIN per contract, INVERSE settlement (`intrinsic_usd / S_T`) +
+  inverse-perp static hedge (`delta * (1 - S0/S_T)`), the conservation guard + the
+  `path_rehedge_unmodeled` marker + `rehedge_cost_sensitivity`.
+- 163 offline + 12 live `network` tests (the figure render test runs locally, skipif
   in CI); mypy --strict (src + scripts) / ruff / em-dash clean; CI green
   (`.github/workflows/ci.yml`, installs `.[dev]`, runs ruff + mypy + `pytest -m "not
   network"`, so CI runs the offline set).
@@ -118,19 +122,22 @@ VRP modules: `vrp/fixtures.py`, `vrp/artifact.py`, `vrp/figures.py`. PR5c (DONE)
 Layer-ii Tardis option-chain loader (`data/sources/tardis_options.py`). PR5d (DONE): the
 delta-hedged-option cost model (`execution/cost.py` `DeribitOptionCostModel` +
 `execution/options.py`), cost-model-first, the first real option cost ~16 bps of the
-underlying for a near-ATM call vs ~110 bps premium. Next steps:
-1. Layer ii continues (PR5e), reusing the kill-gate machinery:
-   - the per-trade short-variance P&L (`simulate_option_trade`: premium received minus
-     the terminal payoff plus the static-hedge P&L, using the PR5d cost model + the
-     realized expiry underlying from Binance Vision), the option-leg P&L-conservation
-     invariant (ADR 0004 caveat 4), and the path-rehedge guard (the analogue of the carry
-     `price_pnl` contamination guard; financing/margin on `initial_margin_fraction`);
-   - the short-variance random-entry null + the cost/peso-bounded gate (reuse
-     `strategy/null.py` + `execution/scoring.py`); commit the monthly snapshot fixtures
-     (the deferred reproducibility artifact) once the needed months/expiries are fixed.
-   Headline stays the measurement + the regime-conditional tail-loss table, NEVER a
-   short-vol Sharpe; the un-measurable path-rehedge slippage is the dominant un-modeled
-   cost (named in the PR5d cost model; ADR 0004 caveats).
+underlying for a near-ATM call vs ~110 bps premium. PR5e (DONE): the per-trade
+short-variance P&L (`simulate_option_trade` + `OptionTradePnL`), in COIN per contract with
+the INVERSE coin settlement (`intrinsic_usd / S_T`) + the inverse-perp static hedge
+(`delta * (1 - S0/S_T)`); the design review REJECTED the first (linear) design for
+understating the put crash tail ~10x, and the inverse fix makes the peso tail honest
+(a 90% crash on a short put settles ~9x the notional). Next steps:
+1. Layer ii FINALE (PR5f): the short-variance random-entry null + the cost/peso-bounded
+   gate + the regime-conditional tail-loss table + the verdict (reuse `strategy/null.py`
+   + `execution/scoring.py` + the kill-gate discipline; a `scripts/run_vrp_gate.py`). It
+   gathers the first-of-month entry snapshots across the VRP window (select a near-ATM
+   option per month via the Tardis loader; the realized expiry underlying from Binance
+   Vision), runs `simulate_option_trade` per entry, and COMMITS the monthly snapshot
+   fixtures (the deferred reproducibility artifact, SHA256-stamped) now that the
+   months/expiries are fixed. Headline = the measurement + the regime tail-loss table,
+   NEVER a short-vol Sharpe; the un-measurable path-rehedge slippage is the dominant
+   un-modeled cost (named on `OptionTradePnL` via `path_rehedge_unmodeled`; ADR 0004).
 2. The Study-1 (carry) write-up (README results + figures) is the OPTIONAL deferred
    deliverable; the pivot took priority per Sam's directive.
 

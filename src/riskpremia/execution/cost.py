@@ -316,6 +316,7 @@ class DeribitOptionCostModel:
     perp_half_spread_bps: float
     routing_fee_bps: float = 0.0
     initial_margin_fraction: float = 0.15
+    funding_capital_rate: float = 0.04
 
     def __attrs_post_init__(self) -> None:
         if not self.name.strip():
@@ -348,6 +349,11 @@ class DeribitOptionCostModel:
             raise CostModelError(
                 f"DeribitOptionCostModel {self.name!r} requires initial_margin_fraction in "
                 f"(0, 1]; got {self.initial_margin_fraction}"
+            )
+        if self.funding_capital_rate < 0.0:
+            raise CostModelError(
+                f"DeribitOptionCostModel {self.name!r} requires funding_capital_rate >= 0; "
+                f"got {self.funding_capital_rate}"
             )
 
     def option_trade_fee_fraction(self, premium_fraction: float) -> float:
@@ -410,6 +416,44 @@ class DeribitOptionCostModel:
         return self.hedge_side_cost_fraction(abs_delta, taker=entry_taker) + (
             self.hedge_side_cost_fraction(abs_delta, taker=exit_taker)
         )
+
+    def option_delivery_fee_on_intrinsic(self, intrinsic_fraction: float) -> float:
+        """The ACTUAL settlement delivery fee given the terminal coin intrinsic (PR5e
+        refinement of the `option_delivery_fee_fraction` ceiling): `min(delivery rate,
+        12.5% of the settlement value)`. An OTM option expires worthless
+        (`intrinsic_fraction == 0`) and pays 0; an ITM option pays the capped rate.
+        `intrinsic_fraction` is the coin settlement value `intrinsic_usd / S_T` (the same
+        coin base as the premium, NOT divided by S0).
+
+        Raises:
+          CostModelError: when `intrinsic_fraction < 0`.
+        """
+        if intrinsic_fraction < 0.0:
+            raise CostModelError(
+                f"option_delivery_fee_on_intrinsic requires intrinsic_fraction >= 0; "
+                f"got {intrinsic_fraction}"
+            )
+        capped = self.option_fee_premium_cap * intrinsic_fraction
+        return min(self.option_delivery_bps / _BPS, capped)
+
+    def margin_financing_fraction(self, hold_hours: float) -> float:
+        """The opportunity cost of the posted option margin over the hold, in coin (a
+        FLOOR): `funding_capital_rate * initial_margin_fraction * (hold_hours / 8760)`.
+
+        This charges only the SHORT-OPTION initial margin; the delta-hedge perp's own
+        margin financing is NOT added, so this is a lower bound on total financing (the
+        hedge reduces portfolio margin under Deribit's cross/portfolio margining, but the
+        hedge-leg financing is deferred). Reported as a floor, not a conservative charge.
+
+        Raises:
+          CostModelError: when `hold_hours < 0`.
+        """
+        if hold_hours < 0.0:
+            raise CostModelError(
+                f"margin_financing_fraction requires hold_hours >= 0; got {hold_hours}"
+            )
+        margin = self.initial_margin_fraction
+        return self.funding_capital_rate * margin * (hold_hours / _HOURS_PER_YEAR)
 
 
 DERIBIT_OPTION = DeribitOptionCostModel(

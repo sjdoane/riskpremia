@@ -254,3 +254,19 @@ BTC call vs ~110 bps of premium. Next (PR5e): the per-trade short-variance P&L (
 minus terminal payoff plus the static-hedge P&L) with the option-leg P&L-conservation
 invariant (caveat 4) and the path-rehedge guard, then the short-variance null and the
 cost/peso gate, with the headline staying the measurement + the regime tail table.
+
+PR5e shipped that per-trade short-variance P&L (`simulate_option_trade` + `OptionTradePnL`),
+and the design review made a load-bearing correction worth recording: Deribit BTC/ETH
+options are INVERSE (coin-settled at the expiry price S_T), so the short's payoff is
+`intrinsic_usd / S_T`, not the linear `intrinsic / S0` the first design used; the linear
+error understated the put crash tail by ~10x (a 90% crash settles ~9x the notional, not
+~0.9x), which would have hidden the peso tail the whole study is built to expose. The
+re-implementation books the P&L in coin per contract with the inverse settlement and an
+inverse-perp static hedge `delta * (1 - S0/S_T)`; the option-leg conservation invariant
+(caveat 4) is asserted in the record's post-init; the static-endpoint status is carried on
+the object (`path_rehedge_unmodeled`) so the null/gate cannot read it as a faithful
+continuously-hedged variance return; the ITM-conditional delivery fee refines the PR5d
+ceiling; financing is a floor on the option margin. Next (PR5f): the short-variance
+random-entry null + the cost/peso-bounded gate + the regime-conditional tail-loss table +
+the verdict, gathering and committing the first-of-month entry snapshots across the VRP
+window. The headline stays the measurement + the tail table, never a short-vol Sharpe.
