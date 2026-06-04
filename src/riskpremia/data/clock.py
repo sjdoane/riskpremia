@@ -57,6 +57,12 @@ seconds, not milliseconds, and is rejected rather than silently mis-scaled."""
 _MS_UPPER = 100_000_000_000_000
 """Epoch-ms upper guard (about 5138); a value above this is malformed."""
 
+_US_LOWER = 1_000_000_000_000_000
+"""Epoch-microsecond lower guard (1e15, about 2001-09); a value below this is
+almost certainly milliseconds or seconds, not microseconds, and is rejected."""
+_US_UPPER = 100_000_000_000_000_000
+"""Epoch-microsecond upper guard (1e17, about 5138); above this is malformed."""
+
 _GROSS_INTERVAL_LOW = 0.5
 _GROSS_INTERVAL_HIGH = 2.0
 """The in-band tolerance for the median-gap vs stamped-interval ratio. Outside
@@ -80,6 +86,26 @@ def ms_to_utc(ms: int) -> datetime:
             f"got {ms} (a value this small is likely seconds, not ms)"
         )
     return datetime.fromtimestamp(ms / 1000.0, tz=UTC)
+
+
+def us_to_utc(us: int) -> datetime:
+    """Convert an epoch-MICROSECOND integer to a tz-aware UTC datetime.
+
+    The Tardis Deribit option-chain `timestamp` and `expiration` columns are 16-digit
+    epoch microseconds (ADR 0004 Layer ii). Range-guards against a millisecond or
+    second value passed by mistake (the vendor-doc trap) rather than silently
+    mis-scaling, mirroring `ms_to_utc`. Converts via integer seconds + microseconds so
+    there is no float rounding.
+
+    Raises:
+      VenueFetchError: when `us` is outside the plausible epoch-microsecond range.
+    """
+    if not (_US_LOWER <= us < _US_UPPER):
+        raise VenueFetchError(
+            f"us_to_utc expects epoch MICROSECONDS in [{_US_LOWER}, {_US_UPPER}); "
+            f"got {us} (a value this small is likely milliseconds or seconds, not us)"
+        )
+    return datetime.fromtimestamp(us // 1_000_000, tz=UTC).replace(microsecond=us % 1_000_000)
 
 
 def _funding_records_to_frame(records: Sequence[FundingRecord]) -> pl.DataFrame:

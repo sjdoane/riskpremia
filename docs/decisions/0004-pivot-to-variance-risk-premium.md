@@ -222,5 +222,17 @@ the exact daily closes used are committed as small CSV fixtures (`tests/data/`,
 `kind = "reproducibility_fixture"`) whose SHA256 is stamped into the manifest, and an
 offline test rebuilds the committed headline from them. This is the deliberate
 counterpart to the immutable-dump model (gitignore the bytes, re-fetch, verify): for a
-mutable source the bytes are committed and the stamp makes them tamper-evident. Layer
-ii (the cost-gated tradeable test) is next, cost-model-first.
+mutable source the bytes are committed and the stamp makes them tamper-evident.
+
+Layer ii began with PR5c, the Tardis Deribit option-chain loader (the only greenfield
+data surface). It streams the free first-of-month `options_chain` gzip (~1.8 GB) without
+caching it and extracts a backward as-of chain snapshot (the freshest quote at or before
+an explicit entry instant, point-in-time honest), with a loud completeness check. A
+review subtlety worth recording: the file is ordered by `local_timestamp`, while the
+exchange `timestamp` is non-monotonic by up to ~1 second, so the snapshot keeps the
+maximum-`timestamp` quote (not the file-last) and the early stop uses a grace margin that
+dwarfs the disorder. The committed offline monthly snapshot (the reproducibility
+artifact, stamping the immutable Tardis daily object's provenance) is deferred to the
+consuming cost-model PR, once the needed months and expiries are fixed; the loader's live
+network test is its real-data proof. Next: the delta-hedged-option cost model (caveat 4's
+P&L-conservation invariant), then the short-variance null and the cost/peso gate.

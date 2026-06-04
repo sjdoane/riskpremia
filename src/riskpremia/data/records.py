@@ -25,10 +25,12 @@ import attrs
 
 from riskpremia.data.errors import VenueFetchError
 
-Venue = Literal["binance_vision", "okx", "hyperliquid", "deribit"]
+Venue = Literal["binance_vision", "okx", "hyperliquid", "deribit", "tardis"]
 """The data-source venues. A `Literal` (not an `Enum`) so it round-trips to
 TOML/JSON cleanly and stays grep-able. `deribit` is the implied-vol-index source
-(DVOL) for the variance-risk-premium study (ADR 0004)."""
+(the live DVOL API); `tardis` is the (immutable, first-of-month free) Deribit
+option-chain CSV vendor used for the Layer-ii tradeable test (ADR 0004). The two
+are distinct reproducibility models, so they are distinct venues."""
 
 
 def derive_canonical(symbol: str) -> str:
@@ -158,3 +160,51 @@ class DvolRecord:
     high: Decimal
     low: Decimal
     close: Decimal
+
+
+OptionType = Literal["put", "call"]
+"""A vanilla option's right. Parsed from the authoritative Tardis `type` column
+(not inferred from the symbol suffix), validated loud at the boundary."""
+
+
+@attrs.frozen(slots=True)
+class OptionQuoteRecord:
+    """One option instrument's quote in a point-in-time chain snapshot (ADR 0004
+    Layer ii; the Tardis Deribit `options_chain` source).
+
+    Prices (`bid_price`, `ask_price`, `mark_price`) are COIN-denominated (the Deribit
+    convention; e.g. 0.018 BTC). The USD premium is `price * underlying_price`, where
+    `underlying_price` is THIS row's Deribit index/forward (USD); the cost model does
+    that conversion and never re-joins an external spot (which would reintroduce the
+    cross-underlying basis the measurement layer already flags). IVs are vol points.
+    `quote_ts` is the real observed timestamp of this instrument's FRESHEST quote (the
+    maximum exchange timestamp) at or before the snapshot's `as_of` (so per-instrument
+    staleness is visible; the file's row order is non-monotonic so freshest != last). The
+    `bid/ask/mark` observations and the greeks are `None` when the vendor row is empty
+    (an illiquid or just-listed instrument); only the identity + as-of + underlying
+    fields are guaranteed. `synthetic_underlying` flags a Deribit `SYN.*` index (a
+    constructed forward, not the live index), so a downstream USD/hedge model can
+    decide whether to use or exclude it with provenance.
+    """
+
+    currency: DvolCurrency
+    instrument: str
+    option_type: OptionType
+    strike: Decimal
+    expiry: datetime
+    quote_ts: datetime
+    underlying_index: str
+    underlying_price: Decimal
+    synthetic_underlying: bool
+    bid_price: Decimal | None = None
+    ask_price: Decimal | None = None
+    mark_price: Decimal | None = None
+    bid_amount: Decimal | None = None
+    ask_amount: Decimal | None = None
+    bid_iv: Decimal | None = None
+    ask_iv: Decimal | None = None
+    mark_iv: Decimal | None = None
+    delta: Decimal | None = None
+    gamma: Decimal | None = None
+    vega: Decimal | None = None
+    open_interest: Decimal | None = None
