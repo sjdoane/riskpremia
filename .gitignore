@@ -1,0 +1,136 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# uv / venv (the dedicated venv lives OUTSIDE the OneDrive tree at
+# C:\Users\SamJD\.venvs\riskpremia to avoid OneDrive sync churn; never commit it)
+.venv/
+.uv/
+uv.lock.bak
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+coverage.xml
+*.cover
+.hypothesis/
+.pytest_cache/
+cover/
+
+# Type checkers / linters
+.mypy_cache/
+.dmypy.json
+dmypy.json
+.ruff_cache/
+.pyre/
+.pytype/
+
+# Logs
+*.log
+
+# Jupyter
+.ipynb_checkpoints
+profile_default/
+ipython_config.py
+
+# pyenv / pdm / pipenv
+.python-version
+.pdm.toml
+Pipfile.lock
+poetry.lock
+__pypackages__/
+
+# Environments / secrets
+.env
+.env.local
+.env.*.local
+.envrc
+*.env
+.venv*/
+env/
+ENV/
+venv/
+
+# IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+ehthumbs.db
+
+# Project-specific: raw market data and large binaries.
+# Raw exchange snapshots (Binance Vision zips, kline/funding parquet) are
+# fetched on demand and verified by SHA256 against a committed manifest, so the
+# bytes themselves stay out of git; the manifest + derived/aggregated artifacts
+# are what a reviewer regenerates from. data/raw is ignored; data/snapshots
+# keeps only its manifest marker.
+data/raw/
+data/cache/
+data/snapshots/*
+!data/snapshots/manifest.toml
+!data/.gitkeep
+runs/
+*.parquet
+*.feather
+*.h5
+*.hdf5
+*.duckdb
+*.sqlite
+*.zip
+*.csv
+!docs/**/*.csv
+!tests/**/*.csv
+
+# Derived study artifacts: the committed, regenerable JSON artifact that the
+# figures render from IS tracked (it carries no raw vendor data); large raw
+# artifact dumps under artifacts/raw are not.
+artifacts/raw/
+
+# Secrets (defense in depth; .env covered above)
+secrets/
+*.pem
+*.key
+*.crt
+credentials.json
+service-account*.json
+
+# Local agent / scratch
+.claude/local/
+.claude/settings.local.json
+scratch/
+scratch_*.py
+_scratch_*.py
+TODO.local.md
