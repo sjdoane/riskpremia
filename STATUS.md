@@ -4,7 +4,7 @@ Single source of truth for where Project RiskPremia is and what is deferred.
 Read this FIRST on any new session, then the ADRs it points to. Update after
 every meaningful work block (rule 2).
 
-Last updated: 2026-06-04 (session 4: PIVOTED to the crypto VRP study (ADR 0004); the measurement floor (PR5a) is built and the first VRP is measured + positive).
+Last updated: 2026-06-04 (session 4: PIVOTED to the crypto VRP study (ADR 0004); the measurement floor (PR5a) is built and the first VRP is measured + positive; PR5b shipped the committed measurement artifact + figures + the DVOL/spot reproducibility-fixture manifest stamp).
 
 ## One-line state
 
@@ -29,14 +29,16 @@ the peso tail (Layer ii). Repo: https://github.com/sjdoane/riskpremia. PR5a on
 ```
 $env:PYTHONIOENCODING="utf-8"
 $py = "C:\Users\SamJD\.venvs\riskpremia\Scripts\python.exe"
-& $py -m pytest -q -m "not network" # 108 pass (offline); never touch the off-limits pit-backtest venvs
+& $py -m pytest -q -m "not network" # 128 pass (offline); never touch the off-limits pit-backtest venvs
 & $py -m pytest -q -m network       # live: Binance Vision + OKX + Deribit DVOL (the real-data proof)
-& $py -m pytest -q -m network      # live-exchange tests (OKX + Binance Vision), skipped in CI
-& $py -m mypy                       # strict, 20 src files
-& $py -m ruff check src tests
+& $py -m mypy                       # strict, src + scripts
+& $py -m ruff check src tests scripts
+& $py -m scripts.build_vrp_artifact # one-time: fetch live data -> committed VRP artifact + fixtures + manifest stamp
+& $py -m scripts.regenerate_figures # render docs/figures/*.png from the committed artifact (no network)
 ```
 Setup if the venv is gone: `uv venv --python 3.12 C:\Users\SamJD\.venvs\riskpremia`
-then `uv pip install --python $py -e ".[dev]"`.
+then `uv pip install --python $py -e ".[dev,figures]"` (the `figures` extra adds
+matplotlib, render-only; CI installs only `.[dev]` and skips the figure render test).
 
 ## What is built (data layer, complete)
 
@@ -65,9 +67,10 @@ then `uv pip install --python $py -e ".[dev]"`.
 - `strategy/null.py`: the entry-selection nulls (always-on, non-overlapping, random
   subset). `scripts/run_null_gate.py`: the kill-gate entry point (fetch + surface +
   verdict). `data/sources/binance_vision.py`: + the ms/us kline-timestamp normalizer.
-- 104 tests (96 offline + 8 live `network`); mypy --strict 26 files (+ the script) /
-  ruff / em-dash clean; CI green (`.github/workflows/ci.yml`, installs `.[dev]`, runs
-  ruff + mypy + `pytest -m "not network"`, so CI runs the 96 offline).
+- 128 offline + 10 live `network` tests (the figure render test runs locally, skipif
+  in CI); mypy --strict (src + scripts) / ruff / em-dash clean; CI green
+  (`.github/workflows/ci.yml`, installs `.[dev]`, runs ruff + mypy + `pytest -m "not
+  network"`, so CI runs the offline set).
 
 The data layer yields, for a perp, an aligned **funding + perp-mark + spot +
 basis** series on the funding-event clock that feeds the vendored
@@ -95,18 +98,21 @@ study was always allowed to ship.
 Layer i (PR5a, branch `feat/vrp-dvol-and-measurement`) is built and the first VRP is
 measured + positive (see the one-line state). VRP modules: `data/sources/deribit_dvol.py`,
 `vrp/realized.py` (the matched-horizon variance-swap RV), `vrp/measurement.py`
-(`build_vrp_frame` + `vrp_headline`, the non-overlapping strided headline). Next steps:
-1. The committed Layer-i ARTIFACT + figures: a regenerable JSON of the VRP measurement
-   (the headline table + the regime decomposition) + matplotlib figures (the DVOL-vs-RV
-   series, the pre/post-ETF decay). GATING (PR5a review M1): SHA256-stamp the DVOL snapshot
-   into `manifest.toml` + commit a DVOL CSV fixture BEFORE the number is quoted as a
-   reproducible headline (DVOL is live/as-of/mutable, unlike the immutable Binance dumps).
-2. Layer ii (the tradeable test), cost-model-FIRST per rule 6: the Tardis monthly-chain loader
+(`build_vrp_frame` + `vrp_headline`, the non-overlapping strided headline). PR5b
+(DONE): the committed Layer-i ARTIFACT (`artifacts/vrp_measurement.json`, headline +
+regime decomposition + alignment diagnostic + fingerprint + caveats + the daily series)
+built by `scripts/build_vrp_artifact.py`, matplotlib figures (`docs/figures/`) rendered
+from it by `scripts/regenerate_figures.py` (the `figures` extra, lazy, a skipif render
+test), and the M1 gate closed: both daily-close fixtures are committed under
+`tests/data/` and SHA256-stamped into `manifest.toml` as `reproducibility_fixture`
+entries, with an offline test that the fixtures reproduce the committed headline.
+VRP modules: `vrp/fixtures.py`, `vrp/artifact.py`, `vrp/figures.py`. Next steps:
+1. Layer ii (the tradeable test), cost-model-FIRST per rule 6: the Tardis monthly-chain loader
    (the only greenfield surface, ~1GB/day so stream + extract the ATM snapshot) + the
    delta-hedged-option cost model (extend `execution/cost.py`'s `VenueCostModel`) + the
    short-variance random-entry null + the cost/peso-bounded gate. Headline stays the
    measurement + the regime tail table, NEVER a short-vol Sharpe (ADR 0004 caveats).
-3. The Study-1 (carry) write-up (README results + figures) is the OPTIONAL deferred
+2. The Study-1 (carry) write-up (README results + figures) is the OPTIONAL deferred
    deliverable; the pivot took priority per Sam's directive.
 
 ## Pre-registered kill criterion (frozen UPFRONT; ADR 0001)
@@ -166,7 +172,7 @@ the gate is about REAL-MONEY deployment.
   first gate.
 - Capacity curve (the order-book-walk impact + the size where net edge crosses
   zero, the declared honest headline); the carry signal + the risk-OFF regime
-  circuit breaker; the committed artifact + figures (matplotlib `figures` extra).
+  circuit breaker (carry, deferred).
 - Data-layer extras (not on the kill-gate path): Hyperliquid source, multi-coin
   universe, `scripts/fetch_funding.py` + the committed derived artifact,
   clamp-incidence diagnostic.

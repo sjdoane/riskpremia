@@ -5,21 +5,59 @@
 # have byte-identical inputs before regenerating any derived artifact. Raw
 # bytes are gitignored; this manifest and the derived artifacts are committed.
 #
-# Read/written by src/riskpremia/data/manifest.py (load_manifest / upsert_entries
-# / verify_snapshot). Populated by scripts/fetch_funding.py during the data-layer
-# fetch milestone (PR2+). Schema (per entry, matching SnapshotEntry):
+# Two snapshot kinds with different reproducibility models:
+#   - IMMUTABLE vendor dumps (Binance Vision): the bytes are gitignored, the
+#     SHA256 + the vendor's published_checksum are committed, and a reviewer
+#     re-fetches and verifies byte-identity. relpath is under the gitignored raw
+#     root (data/raw).
+#   - LIVE / as-of sources with no published checksum (Deribit DVOL): a re-fetch
+#     is not guaranteed byte-identical, so the exact daily closes used are
+#     COMMITTED as a small CSV fixture (kind = "reproducibility_fixture") whose
+#     SHA256 makes the committed anchor tamper-evident. relpath is the committed
+#     fixture (under tests/data); raw_root is the repo root. The committed spot
+#     close fixture is recorded the same way so the headline reproduces offline.
 #
-# [[snapshot]]
-# name               = "binance-vision-fundingRate-BTCUSDT-2020-01"
-# venue              = "binance_vision"     # binance_vision | okx | hyperliquid
-# instrument         = "BTCUSDT"
-# kind               = "funding_rate"       # funding_rate | klines | spot
-# relpath            = "binance_vision/BTCUSDT/BTCUSDT-fundingRate-2020-01.zip"
-# source_url         = "https://data.binance.vision/..."
-# fetched_utc        = 2026-06-03T00:00:00+00:00
-# sha256             = "..."                # ours, over the on-disk bytes
-# size_bytes         = 825
-# rows               = 93                   # optional, parsed record count
-# published_checksum = "..."               # optional, the vendor's own SHA256
+# Read/written by src/riskpremia/data/manifest.py (load_manifest / upsert_entries
+# / verify_snapshot). The VRP fixtures + their SHA256 are written by
+# scripts/build_vrp_artifact.py (ADR 0004 PR5b). Schema (per entry, matching
+# SnapshotEntry), one TOML array-of-tables block each:
+#
+#   name               the unique entry key (sorted on)
+#   venue              binance_vision | okx | deribit
+#   instrument         e.g. BTCUSDT
+#   kind               funding_rate | klines | spot | reproducibility_fixture
+#   relpath            path under raw_root (gitignored raw root, or the repo root
+#                      for a committed reproducibility_fixture)
+#   source_url         where the bytes were fetched from
+#   fetched_utc        the UTC fetch instant (a TOML datetime)
+#   sha256             our SHA256 over the on-disk bytes
+#   size_bytes         the on-disk byte size
+#   rows               optional, the parsed record count
+#   published_checksum optional, the vendor's own SHA256 (immutable dumps only)
+#   note               optional, free-text provenance (reproducibility_fixture)
 
-# (empty until the first pull)
+[[snapshot]]
+name = "binance-vision-spot-BTCUSDT-1d"
+venue = "binance_vision"
+instrument = "BTCUSDT"
+kind = "reproducibility_fixture"
+relpath = "tests/data/binance_spot_btcusdt_1d.csv"
+source_url = "https://data.binance.vision/data/spot/monthly/klines/BTCUSDT/1d/ (close = column 4)"
+fetched_utc = 2026-06-04T08:19:39+00:00
+sha256 = "912315f0bba7b2b057934e49e0a05fe38098255c21426222181bf81c2917c1b3"
+size_bytes = 34765
+rows = 1333
+note = "Committed in-repo reproducibility fixture (date,close), a daily-close extract of the Binance Vision spot klines (BTCUSDT, 1d). Pinned so the headline reproduces offline from a clone; the underlying monthly zips carry their own published checksums."
+
+[[snapshot]]
+name = "deribit-dvol-BTC"
+venue = "deribit"
+instrument = "BTCUSDT"
+kind = "reproducibility_fixture"
+relpath = "tests/data/deribit_dvol_btc.csv"
+source_url = "https://www.deribit.com/api/v2/public/get_volatility_index_data (currency=BTC, resolution=1D)"
+fetched_utc = 2026-06-04T08:19:39+00:00
+sha256 = "e0657ac9ec2c1828ffcefe07c071d265583b14b56ee73e5dbf7f9248966db90a"
+size_bytes = 21110
+rows = 1247
+note = "Committed in-repo reproducibility fixture (date,dvol_close). DVOL is a live/as-of series with no published checksum; this SHA256 attests tamper-evidence of the committed daily closes, not vendor byte-fidelity. Regenerate via scripts/build_vrp_artifact.py."

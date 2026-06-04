@@ -95,6 +95,11 @@ class SnapshotEntry:
     size_bytes: int
     rows: int | None = None
     published_checksum: str | None = None
+    note: str | None = None
+    """A free-text provenance note. Used by the `reproducibility_fixture` kind to
+    record that the snapshot is a committed in-repo anchor whose SHA256 attests
+    tamper-evidence of a re-encoded daily series (e.g. the live/as-of Deribit DVOL,
+    which has no immutable source to re-fetch), NOT vendor byte-fidelity."""
 
 
 def _entry_from_toml(table: dict[str, Any]) -> SnapshotEntry:
@@ -123,6 +128,7 @@ def _entry_from_toml(table: dict[str, Any]) -> SnapshotEntry:
         published_checksum=(
             None if table.get("published_checksum") is None else str(table["published_checksum"])
         ),
+        note=None if table.get("note") is None else str(table["note"]),
     )
 
 
@@ -144,8 +150,9 @@ def verify_snapshot(entry: SnapshotEntry, raw_root: Path) -> None:
     raw_path = raw_root / entry.relpath
     if not raw_path.exists():
         raise SnapshotMismatchError(
-            f"snapshot {entry.name!r}: raw file {raw_path} is missing; re-fetch per "
-            f"docs/methodology before regenerating"
+            f"snapshot {entry.name!r}: file {raw_path} is missing or moved. Re-fetch the "
+            f"vendor dump (immutable, checksummed sources) or restore the committed "
+            f"reproducibility fixture (live/as-of sources) before regenerating"
         )
     actual_size = raw_path.stat().st_size
     if actual_size != entry.size_bytes:
@@ -180,6 +187,8 @@ def _emit_entry(entry: SnapshotEntry) -> str:
         lines.append(f"rows = {entry.rows}")
     if entry.published_checksum is not None:
         lines.append(f'published_checksum = "{entry.published_checksum}"')
+    if entry.note is not None:
+        lines.append(f'note = "{_toml_escape(entry.note)}"')
     return "\n".join(lines)
 
 
@@ -198,8 +207,16 @@ def upsert_entries(path: Path, new_entries: tuple[SnapshotEntry, ...]) -> None:
 
     raw_text = path.read_text(encoding="utf-8") if path.exists() else ""
     marker = "[[snapshot]]"
-    idx = raw_text.find(marker)
-    preamble = raw_text[:idx] if idx != -1 else raw_text
+    # The preamble is everything before the first REAL array-of-tables header (a line
+    # whose lstrip starts with the marker), NOT a commented "# [[snapshot]]" example in
+    # the documentation header (a plain `find` would match that and truncate the docs).
+    preamble = raw_text
+    offset = 0
+    for line in raw_text.splitlines(keepends=True):
+        if line.lstrip().startswith(marker):
+            preamble = raw_text[:offset]
+            break
+        offset += len(line)
     preamble = preamble.rstrip("\n")
 
     blocks = "\n\n".join(_emit_entry(e) for e in merged)

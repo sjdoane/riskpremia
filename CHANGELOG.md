@@ -3,6 +3,107 @@
 What shipped, plus every review finding and its resolution (rule 2). Newest
 first. This is the audit trail; STATUS.md is the current-state snapshot.
 
+## 2026-06-04, session 4 (PR5b): the committed VRP artifact + figures + the DVOL reproducibility stamp
+
+Layer i's recruiter-facing, regenerable deliverable, and the M1 reproducibility gate
+from the PR5a review. Shipped on `feat/vrp-artifact-and-figures`:
+
+- `vrp/fixtures.py`: stdlib CSV read/write of the two committed daily-close fixtures.
+  `read_dvol_csv` rebuilds each `DvolRecord` THROUGH the `PydanticDeribitDvolRow`
+  boundary (`o=h=l=c`, the only field the measurement consumes) so the positivity /
+  consistency guards still fire on the reproduction path; `read_spot_csv` carries a
+  positivity check. Written LF with the exact `Decimal` string of each close.
+- `vrp/artifact.py`: the `VrpArtifact` (headline + regime decomposition + an
+  alignment-count diagnostic + the dataset fingerprint + the pinned inference knobs +
+  the binding caveats + the daily series), `build_artifact`, deterministic
+  `artifact_to_json` (`attrs.asdict` + `json.dumps(sort_keys, indent, allow_nan=False)`)
+  and an explicit loud-failure `artifact_from_dict`/`load_artifact`. matplotlib-free.
+- `vrp/figures.py`: lazy-matplotlib (Agg, pinned PNG metadata) render of the
+  DVOL-vs-realized-vol series and the forward-VRP decay, PURELY from the artifact (no
+  bootstrap recompute), with the honesty caveats as figure footnotes.
+- `scripts/build_vrp_artifact.py` (network, one-time): fetches the live DVOL + spot,
+  writes the fixtures, PROVES they reproduce the live headline exactly (the fidelity
+  check), builds `artifacts/vrp_measurement.json`, and SHA256-stamps both fixtures into
+  the manifest. `scripts/regenerate_figures.py` (no network) renders `docs/figures/`.
+- The M1 gate closed: because DVOL is live/as-of with no published checksum, a re-fetch
+  is not byte-guaranteed, so the exact daily closes are COMMITTED (`tests/data/*.csv`,
+  `kind = "reproducibility_fixture"`, `published_checksum=None`) and SHA256-stamped, and
+  an OFFLINE test rebuilds the committed headline from them. This is the documented
+  counterpart to the immutable-dump model (gitignore + re-fetch + verify).
+- `.gitattributes`: `*.csv text eol=lf` (cross-platform SHA stability) + `*.png binary`.
+
+**The committed measurement (reproduced bit-exactly from the fixtures): BTC VRP,
+2022-01..2025-05, 30-day, median-phase mean 0.0873, phase-0 95% block-bootstrap CI
+[0.0331, 0.1194] clearing zero, 70% of days positive, pre-ETF 0.1006 to post-ETF
+0.0593.** 128 offline + 10 network tests; mypy --strict (src + scripts, 38 files), ruff
+(src + tests + scripts), em-dash clean.
+
+#### Design review (APPROVE-WITH-CHANGES, 2 Critical + 4 High, all resolved before/while implementing)
+
+- **C1 [fixed]:** the DVOL fixture reader must route through the pydantic boundary
+  (`o=h=l=c`) + `ms_to_utc`, so a tampered/non-positive close raises rather than flowing
+  a wrong implied variance into the headline (pinned by a test).
+- **C2 [fixed]:** the artifact pins `seed`, `n_boot`, and the resolved bootstrap block
+  length in an `inference` block, and the reproduction test passes them explicitly into
+  `vrp_headline` (never the function defaults), so the committed CI stays regenerable if
+  a default later changes.
+- **H1 [fixed]:** the spot fixture is committed (the offline CI test needs it), with the
+  derivation recorded in the manifest entry + ADR, and the build script asserts the
+  committed fixtures reproduce the live headline exactly before writing.
+- **H2 [fixed]:** committed fixtures use a distinct `kind = "reproducibility_fixture"`
+  with a provenance `note` field (new on `SnapshotEntry`), and `verify_snapshot`'s
+  missing-file message no longer assumes a re-fetchable vendor dump; the deliberate
+  departure (committed in-repo anchor for a live source) is documented in ADR 0004.
+- **H3 [fixed]:** the decay figure renders the phase BAND as the point estimate's
+  dispersion and LABELS the bootstrap interval as the phase-0 strided CI, never an error
+  bar on the median; pre/post regime means are plain descriptive segments.
+- **H4 [fixed]:** the cross-underlying basis (Deribit index vs Binance spot) and the
+  vol-vs-variance caveats are carried as artifact `caveats` data AND as figure
+  footnotes, so an exhibit that travels without the README still carries them.
+- Mediums/Lows folded in: tiered cross-platform tolerance in the reproduction test
+  (exact point estimates; 1e-6 relative on the bootstrap CI / Politis-White block length,
+  citing the in-repo `sharpe.py` `_phi` libm precedent, **M1**); pinned PNG metadata for
+  byte-stable re-renders (**M2**); exact headline floats (**M3**); `json.dumps` over a
+  hand-rolled emitter + a round-trip test (**M4**); a coherent two-study README reframe
+  rather than a bolt-on section (**M5**); a stronger committed-manifest test asserting the
+  fixture SHAs (**L1**); the vol-vs-variance figure label (**L2**); figures never recompute
+  the bootstrap (**L3**).
+- **upsert bug found + fixed while stamping:** `upsert_entries` located the preamble with
+  `str.find("[[snapshot]]")`, which matched the COMMENTED `# [[snapshot]]` schema example
+  and truncated the documentation. Fixed to find the marker only at a real line start;
+  pinned by a regression test.
+
+#### Post-implementation review (SHIP, 0 Critical/High/Medium, 4 Low)
+
+The reviewer reproduced the committed headline bit-exactly by independent reconstruction,
+confirmed the SHA stamps + `verify_snapshot` + the byte-identical JSON round-trip, the
+series-vs-frame consistency, the alignment diagnostic surfacing a real join shortfall,
+the figure honesty, the null-tail render path, and the boundary guard, and confirmed the
+em-dash sweep. Resolved:
+
+- **L1 [fixed]:** `build_vrp_artifact.py` carried a ruff E501 + a mypy `object`-typed
+  return that the src-only gate did not catch. Fixed (typed `_headline` as
+  `tuple[VrpHeadline, pl.DataFrame]`, wrapped the long line) AND extended the gate to
+  `scripts/` (ruff + mypy) so script debt cannot recur; `run_null_gate.py` was already
+  clean under the extended gate.
+- **L2 [fixed]:** an empty regime would make `json.dumps` emit a bare `NaN` (invalid
+  JSON). `artifact_to_json` now passes `allow_nan=False`, so a future empty-regime build
+  fails loudly at write time (the shipped full-range artifact has no empty regime).
+- **L4 [fixed]:** STATUS.md carried stale test/file counts; reconciled to the current
+  128 offline + 10 network, mypy src + scripts.
+- **L3 [accepted as-is]:** a tampered DVOL close reports "open must be positive" (the
+  boundary checks the equal `o=h=l=c` in field order); functionally correct (it raises),
+  cosmetically imperfect, left as-is.
+
+#### Verification (against real data, not just fixtures)
+
+The build script ran end-to-end on the live Deribit DVOL (1247 daily points) + Binance
+Vision spot (1333 daily closes); the committed-fixture fidelity check passed (the
+committed bytes reproduce the live headline exactly), and a re-run produced byte-
+identical fixtures + artifact (only `fetched_utc` changes), confirming the live DVOL is
+stable for the historical window. All 10 live `network` tests pass; the figures re-render
+byte-stably from the committed artifact.
+
 ## 2026-06-04, session 4: the VRP pivot (ADR 0004) + the measurement floor (PR5a)
 
 ### The pivot: crypto variance risk premium (ADR 0004, merged)

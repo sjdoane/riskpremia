@@ -4,10 +4,10 @@ Assembles the variance risk premium from the Deribit DVOL implied variance and t
 matched-horizon realized variance (`vrp.realized`), then summarises it honestly.
 
 Two VRP objects are computed and kept SEPARATE (ADR 0004 caveat 2):
-  - `vrp_forward[t] = IV(t)^2 - RV(t+1 .. t+W)`  -- the EX-POST realized premium, the
+  - `vrp_forward[t] = IV(t)^2 - RV(t+1 .. t+W)`: the EX-POST realized premium, the
     measurement HEADLINE. It uses future data by construction and is NOT a tradeable
     signal.
-  - `vrp_trailing[t] = IV(t)^2 - RV(t-W+1 .. t)` -- the tradeable proxy (Layer-ii
+  - `vrp_trailing[t] = IV(t)^2 - RV(t-W+1 .. t)`: the tradeable proxy (Layer-ii
     input), using only past data.
 
 Inference mirrors the carry study's overlap discipline (ADR 0003 finding 9, reused

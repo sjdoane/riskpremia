@@ -211,3 +211,16 @@ model, then the random-entry null, then the measurement and the gated tradeable 
 each via the rule-1 process. The week-1 data spike is done and passed; the next flip
 condition to watch is the post-ETF tradeable sample being too small to deflate, in
 which case Layer ii is reported descriptively and the measurement is the headline.
+
+Build progress: Layer i (PR5a) is built and the first BTC VRP measured and positive
+(mean 0.087, phase-0 95% CI [0.033, 0.119] clearing zero, 70% of days positive, a
+pre-ETF 0.101 to post-ETF 0.059 decay). PR5b ships the committed Layer-i deliverable
+(`artifacts/vrp_measurement.json` + the `docs/figures/` figures rendered from it) and
+closes caveat 4's reproducibility plumbing for the live DVOL series: because DVOL is
+live/as-of with no published checksum, a re-fetch is not guaranteed byte-identical, so
+the exact daily closes used are committed as small CSV fixtures (`tests/data/`,
+`kind = "reproducibility_fixture"`) whose SHA256 is stamped into the manifest, and an
+offline test rebuilds the committed headline from them. This is the deliberate
+counterpart to the immutable-dump model (gitignore the bytes, re-fetch, verify): for a
+mutable source the bytes are committed and the stamp makes them tamper-evident. Layer
+ii (the cost-gated tradeable test) is next, cost-model-first.
