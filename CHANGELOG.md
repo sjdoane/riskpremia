@@ -3,6 +3,64 @@
 What shipped, plus every review finding and its resolution (rule 2). Newest
 first. This is the audit trail; STATUS.md is the current-state snapshot.
 
+## 2026-06-03, session 2: GitHub + data-layer PR1 (typed core)
+
+### Shipped
+
+- **Repo on GitHub** (https://github.com/sjdoane/riskpremia). README
+  restructured as a reviewer front door (honest WIP status, the question, the
+  pre-registered kill criterion, a methodology table, the reproducibility story,
+  a reading map). `main` pushed (scaffold + plan + README commits).
+- **Data-layer PR1 (typed core)** on branch `feat/data-layer-pr1-typed-core`:
+  `data/errors.py` (loud-failure hierarchy), `records.py` (attrs carriers +
+  cross-venue canonicalization; `premium` carried, perp MARK price, explicit spot
+  `quote`), `boundary.py` (the pydantic IO boundary, `extra="forbid"` on the
+  immutable Binance CSV), `clock.py` (ms-to-UTC chokepoint, realized-aware
+  deterministic dedup, median-robust interval guard, backward as-of join,
+  per-event label horizons), `manifest.py` (SHA256 + CHECKSUM parsing + TOML
+  read/write/verify). Committed the verified BTCUSDT-2020-01 fixture.
+- **28 new tests (36 total).** The centerpiece CPCV contract test feeds the
+  observation frame + label horizons into the REAL vendored `CPCVSplitter` /
+  `PurgedKFoldSplitter` (not a mock) and asserts the splits + gates. Plus the PIT
+  backward-join test, the Float64-vs-Decimal basis check, and the conflict /
+  gross-interval / multi-instrument / seconds-vs-ms / extra-column failure modes.
+- Found + pinned the Windows `tzdata==2026.2` requirement (polars needs it to
+  resolve the "UTC" tz string when materializing tz-aware datetimes).
+
+### Review findings and resolutions
+
+Data-layer milestone ran the rule-1 gate (recorded in session-1 entry): Plan agent
+-> Plan-reviewer (APPROVE-WITH-CHANGES, 5 Critical/High resolutions). PR1 then ran
+a senior-quant **post-impl review (FIX-THEN-SHIP)**:
+
+- **C1 [High, fixed]:** `derive_canonical` stripped `USD` before `BUSD`, so
+  `BTCBUSD` wrongly yielded `BTCB` (a silently-wrong cross-venue join key).
+  Resolution: order suffixes longest-first (`USDT, USDC, BUSD, USD`) + a
+  `BTCBUSD -> BTC` test.
+- **L2 [Low, fixed]:** `parse_checksum_line` left the GNU binary-mode `*` marker
+  in the filename. Resolution: strip a single leading `*`.
+- **L3 [Low, fixed]:** `make_label_horizons` did not assert its input was sorted
+  (a partial-lookahead foot-gun on a public function). Resolution: raise on an
+  unsorted `dt`.
+- **L4 [Low, deferred to PR2 with a documented precondition]:** the as-of join
+  ties on input order under duplicate price stamps. Resolution: docstring
+  precondition (price sources dedup at source; kline/spot closes are unique).
+- **L5 [Low, fixed]:** the manifest writer emitted leading blank lines on an
+  empty preamble. Resolution: special-cased empty preamble.
+- The reviewer independently VERIFIED (not findings): the backward as-of join
+  cannot pull a future price; `make_label_horizons` has no partial-label
+  lookahead and satisfies cv.py's `_require_label_horizons` + purge predicate; the
+  dedup is order-deterministic via the stable `_ingest_idx`; every Critical/High
+  Plan-review resolution is present in code, not narrated.
+
+### Verification (against real data, not just mocks)
+
+- The committed real fixture flows through boundary -> records -> normalize ->
+  observation end to end (`dt` is `Datetime(us, UTC)`, canonical `BTC`, exact
+  rate preserved, the deliberate ~30-day gap surfaces as a 0.33 diagnostic, not a
+  false failure). mypy --strict 15 files clean, ruff clean, pytest 36/36, em-dash
+  clean in the riskpremia venv.
+
 ## 2026-06-03, session 1: scaffold + week-1 data-access spike
 
 ### Shipped
