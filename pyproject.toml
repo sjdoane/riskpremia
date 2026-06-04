@@ -56,7 +56,7 @@ packages = ["src/riskpremia"]
 # public function and class is fully typed; no implicit Any.
 strict = true
 python_version = "3.11"
-files = ["src/riskpremia"]
+files = ["src/riskpremia", "scripts"]
 exclude = ["tests/"]
 plugins = ["pydantic.mypy"]
 warn_return_any = true

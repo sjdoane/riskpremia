@@ -1,104 +1,141 @@
 # RiskPremia
 
-A reproducible, intellectually-honest **measurement study** of the crypto
-perpetual-futures **funding-carry** risk premium: does the carry survive realistic
-exchange fees, the two-leg bid-ask spread, regime conditioning, and the
-post-spot-ETF basis decay, measured on a venue a US retail trader can actually
-trade? The honest contribution is the cost realism, the confound controls, the
-capacity ceiling, and a pre-registered kill criterion, not a backtest number.
+A reproducible, intellectually-honest **measurement study** of crypto risk premia.
+One apparatus (free, US-reachable, checksum-pinned data; a vendored deflated-Sharpe /
+purged-CPCV / bootstrap stack; a cost-model-first, random-entry-null kill gate) is
+pointed at two distinct premia:
 
-Sibling to [pit-backtest](https://github.com/sjdoane/pit-backtest), whose
-recruiter-facing headline was a *reproducible honest momentum null* (vanilla
-momentum does not beat passive after costs and deflation). This project extends
-that discipline to a market with a defensible economic edge.
+1. **The perpetual funding carry** (Study 1): does a delta-neutral long-spot /
+   short-perp book that collects funding survive realistic retail costs? **Result: an
+   honest null.** Net-of-cost Deflated Sharpe is ~0 on every US-tradeable venue and
+   horizon; the round-trip cost dwarfs the funding and the post-spot-ETF basis decayed.
+   Killed cleanly per the pre-registered criterion ([ADR 0003](docs/decisions/0003-cost-model-and-null.md)).
+2. **The variance risk premium** (Study 2, active): implied variance (Deribit DVOL)
+   persistently exceeds subsequently-realized variance in BTC. **Result so far: a real,
+   positive, statistically-significant premium** (the measurement floor, Layer i). Whether
+   a short-variance implementation survives option costs and the crash tail is Layer ii
+   (in progress, pre-registered as a likely cost/peso-bounded null).
 
-> **Status: early build (2026-06-03).** Scaffold + the week-1 data-access spike +
-> the lead-track decision are done; the data layer is in progress. There is **no
-> result yet**, by design: the cost model and a random-entry null come before any
-> signal. This README describes the question and the apparatus; the numbers land
-> when the build does. Live state is always in [STATUS.md](STATUS.md).
+Sibling to [pit-backtest](https://github.com/sjdoane/pit-backtest), whose headline was a
+*reproducible honest momentum null*. The contribution here is the same: cost realism,
+confound controls, a pre-registered kill criterion, and reproducibility, never a hyped
+backtest. An honest null is a success; a blown-up account or an oversold backtest is a
+failure.
 
-## Why this premium (the economic thesis, cited not claimed)
+> **Status (2026-06-04):** Study 1 killed (on `main`). Study 2 Layer i (the VRP
+> measurement) is built, measured, and committed as a regenerable artifact + figures
+> below; Layer ii (the cost-gated tradeable test) is next. Live state is always in
+> [STATUS.md](STATUS.md).
 
-Leveraged-long crypto traders pay funding to hold perpetual futures; a
-delta-neutral book (long spot, short perp) collects it. It is compensation for a
-real, un-hedgeable risk: forced-liquidation and exchange-solvency exposure, with
-arbitrage capital kept scarce because there is no spot/perp cross-margin on
-regulated venues (you fund twice). This is a published result, not a discovery
-(Schmeling, Schrimpf and Todorov, "Crypto carry," BIS Working Paper 1087). The
-naive trade is content-farmed and reads as hype, so the contribution here is the
-risk treatment and an honest quantification of the **post-spot-ETF decay** (the
-basis fell from roughly 25% annualized in early 2024 to under about 5%).
+## Study 2 result: the BTC variance risk premium (Layer i, the measurement floor)
 
-## Pre-registered kill criterion (declared before any signal exists)
+Implied variance (the Deribit DVOL index, squared) minus the matched-horizon realized
+variance (the variance-swap convention, on the Binance Vision spot closes), BTC,
+2022-01 to 2025-05, 30-day horizon:
 
-The study ships whatever the result is, an honest null included. The kill
-criterion gates **real-money deployment**, not whether the write-up is worth
-doing. Frozen up front in [ADR 0001](docs/decisions/0001-lead-track-selection.md):
+| Quantity | Value |
+| --- | --- |
+| Mean VRP (median across non-overlapping phases) | **0.087** annualized variance points |
+| 95% CI (phase-0 strided block-bootstrap, overlap-honest) | **[0.033, 0.119]**, clears zero |
+| Days with implied > realized | **70%** |
+| Pre-spot-ETF mean to post-spot-ETF mean | **0.101 to 0.059** (a decay paralleling the carry) |
 
-- **Primary:** net-of-all-cost (US-tradeable-venue fees + both-leg spread +
-  funding + short-term tax) **Deflated Sharpe below 0.95 out-of-sample**, under
-  event-time-purged CPCV with embargo, on the frozen trial count, on the held-out
-  post-spot-ETF period, means **declare non-viable and publish the honest null**.
-- **Early economic gate:** if the median funding collected does not exceed the
-  amortized round-trip cost for a passive always-on carry, the naive carry is
-  dead after costs and any edge must come from selection or regime timing.
+The premium is real and positive: implied variance is, on average, dearer than what is
+subsequently realized, which is what an option seller is paid for bearing variance and
+jump risk. The CI clearing zero is reported on the **non-overlapping** strided series
+with a Politis-White block-deflated effective sample size, not a dishonest t-stat on the
+29/30-overlapping daily series. This is a **measurement**, not a tradeable result (see
+the caveats below and Layer ii).
 
-## Methodology
+![BTC implied vs realized volatility](docs/figures/dvol_vs_realized.png)
+
+![BTC variance risk premium with the spot-ETF regime means](docs/figures/vrp_decay.png)
+
+The numbers and figures regenerate from a committed JSON artifact
+([artifacts/vrp_measurement.json](artifacts/vrp_measurement.json)) with no data bundle:
+
+```powershell
+# render the figures from the committed artifact (needs the figures extra)
+python -m scripts.regenerate_figures
+# rebuild the artifact + fixtures + manifest stamp from the live data (one-time)
+python -m scripts.build_vrp_artifact
+```
+
+**Binding caveats (carried in the artifact and on the figures):** the headline is the
+measurement plus the regime decomposition, **never a short-volatility Sharpe** (the
+Deflated Sharpe cannot price an out-of-sample crash); the point estimate is the
+median-phase mean while the CI is the phase-0 strided interval; the implied leg is the
+Deribit BTC index and the realized leg the Binance spot, so the premium is a
+cross-underlying proxy; and the vol-point spread (figure 1) is a distinct object from the
+variance premium (figure 2). The decision to harvest it rests on the in-sample crash
+losses plus a peso-adjustment (Layer ii), not on a Sharpe.
+
+## Pre-registered kill criteria (declared before any signal exists)
+
+Each study ships whatever the result is, an honest null included. The criterion gates
+**real-money deployment**, not whether the write-up is worth doing.
+
+- **Study 1 (carry,** [ADR 0001](docs/decisions/0001-lead-track-selection.md)**):**
+  net-of-all-cost Deflated Sharpe below 0.95 out-of-sample on the held-out post-spot-ETF
+  period means declare non-viable. **Triggered: killed.**
+- **Study 2 (VRP,** [ADR 0004](docs/decisions/0004-pivot-to-variance-risk-premium.md)**):**
+  net-of-all-modeled-cost Deflated Sharpe below 0.95 out-of-sample, **or** an in-sample
+  crash loss plus peso-adjustment a retail account could not survive, means declare
+  non-viable. The measurement floor (Layer i, above) is the primary deliverable either
+  way.
+
+## Methodology (the shared discipline)
 
 | Pillar | How |
 | --- | --- |
-| Cost model first | Build the per-leg modeled cost (taker/maker fees + half-to-full spread on entry and exit + funding) and run a random-entry NULL through it BEFORE any signal. If the signal is not clearly better than the null after costs, there is no edge. |
-| Point-in-time discipline | The event clock is the funding settlement, not the calendar. Funding realized at T is known only at or after T; prices are taken from a backward as-of join, so no future leakage. |
-| Event-time-purged CPCV | Combinatorial Purged Cross-Validation (Lopez de Prado 2018) split on funding events with embargo, reused from the sibling stack. |
-| Deflated performance | PSR / Deflated Sharpe / MinTRL (Bailey and Lopez de Prado 2014) with an honest trial count; every configuration logged to a committed trial registry; Harvey-Liu BHY false-discovery control across the hypothesis set. |
-| Capacity + break-even | Net edge vs position size with measured impact (the size where net edge crosses zero is the headline), plus the per-trade cost at which the edge dies. |
-| Confound controls | Premium measured on long Binance history but the kill gate on US-realized funding, with the venue-basis delta reported as a measured number; funding reported as the clamped realized cash flow, not the pure premium; a pre-committed survivor universe to avoid survivorship-inflated cross-sections. |
+| Cost model first | Build the per-leg modeled cost (fees + spread on entry and exit + funding or option premium) and run a random-entry NULL through it BEFORE any signal. If the signal is not clearly better than the null after costs, there is no edge. |
+| Point-in-time discipline | The clock is the market event (the funding settlement; the daily DVOL/realized window), not the calendar. Forward windows use only future data by construction and are never used as a tradeable signal. |
+| Honest overlap inference | Overlapping windows are autocorrelated, so the headline is the NON-overlapping strided series with a stationary block bootstrap and a Politis-White block-deflated effective sample size, never a naive t-stat. |
+| Deflated performance | PSR / Deflated Sharpe / MinTRL (Bailey and Lopez de Prado 2014) with an honest trial count, reported necessary-not-sufficient for a premium (it cannot price the out-of-sample crash, the peso problem). |
+| Confound controls | Premia measured on long Binance history but the US-realized confounds (the venue-basis funding delta; the Deribit-vs-Binance underlying basis) reported as caveats at the point of computation; a pre-committed survivor universe. |
+| Reproducibility | Free, keyless, US-reachable, stdlib-only fetch; raw bytes SHA256-stamped into a committed manifest; live/as-of inputs (DVOL) committed as tamper-evident CSV fixtures; only derived aggregate artifacts tracked, so a reviewer regenerates every number from a clone. |
 
 ## Reproducibility
 
-Free, no API key, and verifiable from a clone. The long-history funding series
-comes from Binance Vision S3 dumps (checksummed monthly files from 2020), the
-live US-reachable tier is OKX (and Hyperliquid on-chain); raw bytes are
-gitignored but SHA256-stamped into a committed manifest, and only derived
-aggregate artifacts are tracked, so a reviewer re-fetches, verifies byte-identity,
-and regenerates the headline. (Honest venue note: the live Binance and Bybit REST
-APIs are geo-blocked from US IPs, which is itself a risk-register entry; the data
-dumps and OKX are not.)
+Free, no API key, verifiable from a clone. Funding + spot history come from Binance
+Vision S3 dumps (checksummed monthly files from 2020); the implied-vol index is the
+Deribit DVOL endpoint (keyless, US-reachable). Immutable dumps are gitignored and
+re-fetched against a committed SHA256 manifest; the **live/as-of DVOL series** (no
+published checksum) is pinned differently: the exact daily closes used are committed as
+small CSV fixtures whose SHA256 makes them tamper-evident, so the headline reproduces
+**offline** in CI (see `tests/unit/test_vrp_artifact_reproduces_headline.py`). The whole
+data layer fetches with the standard library only (zero third-party fetch surface).
+(Honest venue note: the live Binance and Bybit REST APIs are geo-blocked from US IPs, a
+risk-register entry; the data dumps, OKX, and Deribit DVOL are not.)
+
+## How it is built (process)
+
+Every meaningful component goes through a design plan, an independent senior-quant design
+review, implementation, and a post-implementation review; every fork (a track choice, a
+go-live decision) goes through a four-lens review plus an adversarial cross-check.
+Critical and High findings are addressed before anything is marked done, and the finding
+plus its resolution is recorded in the [CHANGELOG](CHANGELOG.md). The analytics and
+validation stack (PSR/DSR/MinTRL, purged CPCV, stationary block bootstrap, trial
+registry) is vendored with attribution from the sibling project so the repo regenerates
+every number on its own. Dependencies are pinned to exact patch; mypy runs strict.
 
 ## Reading map
 
 - [STATUS.md](STATUS.md) is the current state and what is deferred (read first).
-- [docs/decisions/](docs/decisions/) is the ADR log; [0001](docs/decisions/0001-lead-track-selection.md)
-  is the lead-track decision, the four-lens review and adversarial cross-check record, and the kill criterion.
-- [docs/research/0001-data-layer-design.md](docs/research/0001-data-layer-design.md)
-  is the reviewed data-layer design.
-- [docs/STRATEGY-BRIEF.md](docs/STRATEGY-BRIEF.md) is the stress-tested context (the two
-  candidate tracks and why Track B leads).
+- [docs/decisions/](docs/decisions/) is the ADR log: [0001](docs/decisions/0001-lead-track-selection.md)
+  (lead-track choice + kill criterion), [0002](docs/decisions/0002-data-layer-funding-clock.md)
+  (data layer), [0003](docs/decisions/0003-cost-model-and-null.md) (cost model + the carry
+  kill), [0004](docs/decisions/0004-pivot-to-variance-risk-premium.md) (the VRP pivot,
+  the two-layer design, the binding caveats).
 - [CHANGELOG.md](CHANGELOG.md) is the audit trail: every review finding and its resolution.
-
-Track A (a single-name earnings variance-risk-premium study) was examined and
-deprioritized; the friction-adjusted reasoning is in ADR 0001. Killing your own
-weaker track on honest evidence is the point.
-
-## How it is built (process)
-
-Every meaningful component goes through a design plan, an independent senior-quant design review,
-implementation, and a post-implementation review; every fork (the lead-track choice) goes
-through a four-lens review plus an adversarial cross-check. Critical and High
-findings are addressed before anything is marked done, and the finding plus its
-resolution is recorded in the CHANGELOG. The analytics and validation stack
-(PSR/DSR/MinTRL, purged CPCV, stationary block bootstrap, trial registry) is
-vendored with attribution from the sibling project so the repo regenerates every
-number on its own. Dependencies are pinned to exact patch; mypy runs strict.
 
 ## Setup
 
 ```powershell
 # Dedicated venv (kept outside the synced tree)
 uv venv --python 3.12 C:\Users\SamJD\.venvs\riskpremia
-uv pip install --python C:\Users\SamJD\.venvs\riskpremia\Scripts\python.exe -e ".[dev]"
-C:\Users\SamJD\.venvs\riskpremia\Scripts\python.exe -m pytest -q
+uv pip install --python C:\Users\SamJD\.venvs\riskpremia\Scripts\python.exe -e ".[dev,figures]"
+C:\Users\SamJD\.venvs\riskpremia\Scripts\python.exe -m pytest -q -m "not network"
 ```
 
 ## License

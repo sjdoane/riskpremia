@@ -9,5 +9,11 @@
 *.toml text eol=lf
 artifacts/**/*.json text eol=lf
 data/snapshots/manifest.toml text eol=lf
+# committed CSV fixtures are SHA256-stamped into the manifest; pin them to LF on-disk
+# so the hash is byte-stable across Windows and Linux checkouts.
+*.csv text eol=lf
 # committed test-fixture zip is hash-critical: never normalize it
 *.zip binary
+# committed figures are binary; never EOL-normalize (the JSON artifact, not the PNG
+# bytes, is the audited reproducibility contract).
+*.png binary

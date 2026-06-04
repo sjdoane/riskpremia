@@ -100,7 +100,44 @@ def test_verify_snapshot_detects_drift(tmp_path: Path) -> None:
         verify_snapshot(entry, raw_root)
 
 
-def test_committed_manifest_stub_loads_empty() -> None:
-    # The real committed stub has no entries yet; it must load as an empty tuple.
-    stub = Path(__file__).resolve().parents[2] / "data" / "snapshots" / "manifest.toml"
-    assert load_manifest(stub) == ()
+def test_committed_manifest_has_vrp_fixture_snapshots() -> None:
+    # The committed manifest now stamps the two VRP reproducibility fixtures (ADR 0004
+    # PR5b). Assert they are present and their SHA256 matches the committed bytes, so a
+    # tampered fixture is caught offline in CI (design review L1).
+    repo = Path(__file__).resolve().parents[2]
+    entries = {e.name: e for e in load_manifest(repo / "data" / "snapshots" / "manifest.toml")}
+    assert {"deribit-dvol-BTC", "binance-vision-spot-BTCUSDT-1d"} <= set(entries)
+    for entry in entries.values():
+        if entry.kind == "reproducibility_fixture":
+            assert entry.published_checksum is None  # live source, no vendor checksum
+            assert entry.note  # provenance note travels with the fixture
+            assert compute_sha256(repo / entry.relpath) == entry.sha256
+            verify_snapshot(entry, repo)  # no raise
+
+
+def test_note_field_roundtrips(tmp_path: Path) -> None:
+    path = tmp_path / "manifest.toml"
+    entry = SnapshotEntry(
+        name="fix", venue="deribit", instrument="BTCUSDT", kind="reproducibility_fixture",
+        relpath="tests/data/x.csv", source_url="u", fetched_utc=datetime(2026, 6, 4, tzinfo=UTC),
+        sha256="a" * 64, size_bytes=10, rows=5, published_checksum=None, note="a provenance note",
+    )
+    upsert_entries(path, (entry,))
+    loaded = load_manifest(path)
+    assert loaded[0].note == "a provenance note"
+    assert loaded[0].published_checksum is None
+
+
+def test_upsert_preserves_commented_snapshot_marker_in_preamble(tmp_path: Path) -> None:
+    # A documentation preamble that includes a commented "[[snapshot]]" example must be
+    # kept verbatim; a plain str.find would match the comment and truncate the docs.
+    path = tmp_path / "manifest.toml"
+    path.write_text(
+        '# docs\n# example block:\n# [[snapshot]]\n# name = "example"\n',
+        encoding="utf-8",
+    )
+    upsert_entries(path, (_entry("a-2020-01", "a" * 64, 10, "binance_vision/BTCUSDT/x.zip"),))
+    text = path.read_text(encoding="utf-8")
+    assert "# [[snapshot]]" in text  # the commented example survived the upsert
+    assert '# name = "example"' in text
+    assert [x.name for x in load_manifest(path)] == ["a-2020-01"]
