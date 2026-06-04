@@ -3,6 +3,83 @@
 What shipped, plus every review finding and its resolution (rule 2). Newest
 first. This is the audit trail; STATUS.md is the current-state snapshot.
 
+## 2026-06-04, session 4 (PR5c): the Tardis Deribit option-chain loader (Layer ii data layer)
+
+The first piece of Layer ii (the cost-gated short-variance test), built cost-model-
+FIRST: the data loader the cost model and the null will consume. Shipped on
+`feat/vrp-tardis-option-chain`:
+
+- `data/sources/tardis_options.py`: `TardisOptionChainSource.fetch_snapshot` streams the
+  free first-of-month Deribit `options_chain` gzip (~1.8 GB) WITHOUT caching it, and
+  extracts a point-in-time chain snapshot. The snapshot is a BACKWARD as-of: an explicit
+  `as_of` entry instant (midnight + offset), keeping per instrument its freshest quote
+  with `timestamp <= as_of`. It stops once the exchange timestamp passes `as_of + grace`,
+  and a loud completeness check (reached as_of, enough instruments, strikes bracket the
+  underlying) fails a truncated/thin chain rather than silently biasing selection.
+- `data/boundary.py` `PydanticTardisOptionRow` (the 24-column header, empty quote/greek
+  cells to None, a put/call enum, positivity + strike-vs-underlying sanity, the `SYN.*`
+  synthetic-underlying flag); `data/records.py` `OptionQuoteRecord` + `OptionType` + the
+  `tardis` venue; `data/clock.py` `us_to_utc` (the range-guarded microsecond clock).
+- A 20-row VERBATIM real-slice fixture (`tests/data/tardis_deribit_options_sample.csv`)
+  for the offline parse tests; the as-of / stop / completeness logic is tested on
+  synthetic gzipped data; one live network test fetches a real BTC snapshot.
+
+**Verified on real data:** a live BTC first-of-month fetch returns 1048 instruments at a
+20-minute as-of, underlying ~43269, strikes 10000..180000 bracketing it, every quote
+point-in-time honest (`quote_ts <= as_of`), bounded (~14 s, never the full gigabyte).
+144 offline + 11 network tests; mypy --strict (src + scripts, 39 files), ruff, em-dash
+clean. Reproducibility note: the committed offline monthly snapshot is deferred to the
+consuming cost-model PR (once the needed months/expiries are fixed); this loader's live
+network test is the real-data proof, and the immutable Tardis daily object will then be
+stamped as the snapshot's provenance.
+
+#### Design review (APPROVE-WITH-CHANGES, 2 Critical + 5 High, all resolved before/while implementing)
+
+The review grounded itself in the real schema (probed live before designing):
+
+- **C1 [fixed]:** the snapshot is a BACKWARD as-of (the freshest quote at-or-before an
+  explicit `as_of`), NOT the last quote in a forward window (which would let different
+  instruments resolve to different later times and leak future data into an entry stamped
+  at the window start).
+- **C2 [fixed]:** the early stop tolerates the exchange-clock disorder via a grace margin
+  (not break-on-first-over-cutoff), plus a loud completeness assertion (reached as_of,
+  `min_instruments`, strikes bracket the underlying) so a truncated chain fails loudly.
+- **H1 [fixed]:** carry `underlying_index` + a `synthetic_underlying` flag for the `SYN.*`
+  forward, and positivity-guard `underlying_price`; **H2 [fixed]:** only identity + as-of
+  + underlying are required, every quote/greek observation is nullable (empty to None);
+  **H3 [fixed]:** a validated `us_to_utc` that RAISES on a ms/seconds value;
+  **H4 [accepted]:** PR5c is live-test-only with a verbatim parse fixture, the committed
+  monthly snapshot documented as deferred to the consuming PR; **H5 [fixed]:** capture
+  `bid_amount`/`ask_amount` + `vega`/`gamma` so a capacity / short-variance cost model
+  needs no gigabyte re-fetch.
+- Mediums folded in: parse `option_type` from the authoritative column, loud on non
+  put/call, futures/perps skipped not raised (M2); the strike-vs-underlying ratio sanity
+  check (M3); the deterministic `(expiry, strike, option_type)` sort (M5); Decimal straight
+  from the CSV string, never via float (M6); the `tardis` venue as a distinct
+  reproducibility model from the live `deribit` DVOL API (M1).
+
+#### Post-implementation review (FIX-THEN-SHIP, 1 High + 1 Medium + 2 Low; the High found by streaming the real file)
+
+The reviewer streamed the real production file and measured the ordering, catching a
+load-bearing error:
+
+- **H1 [fixed]:** the file is ordered by `local_timestamp` (the capture clock), NOT the
+  exchange `timestamp` (about 27% of rows step backward in exchange time, up to ~1 s), so
+  the original file-last-wins selection could keep a STALER quote. Resolution: keep the
+  max-exchange-timestamp quote at-or-before `as_of` (row-order-independent), and the
+  docstrings/comments corrected (the 30 s grace dwarfs the ~1 s disorder, so the early
+  stop is still safe). Not a look-ahead leak (PIT held); the fix removes a sub-second,
+  order-dependent staleness. Pinned by an out-of-order regression test.
+- **M [fixed]:** the loader did not drop an already-expired contract still carrying a
+  stale quote. Resolution: drop `expiry <= as_of`; pinned by a test.
+- **L [fixed]:** a gzip truncated before `as_of` raised a bare `EOFError`; now re-raised
+  as `VenueFetchError` for a consistent loud-failure contract. **L [done]:** the committed-
+  snapshot deferral (H4) is documented in the source docstring + this entry.
+- The reviewer independently CONFIRMED the point-in-time guarantee holds (a quote strictly
+  after `as_of`, even inside the grace window, can never enter the snapshot), the boundary
+  empty-to-None + Decimal-not-float paths, the `us_to_utc` guard, the strike-ratio bounds
+  (no false rejects of legitimate deep-OTM), and the deterministic sort.
+
 ## 2026-06-04, session 4 (PR5b): the committed VRP artifact + figures + the DVOL reproducibility stamp
 
 Layer i's recruiter-facing, regenerable deliverable, and the M1 reproducibility gate
