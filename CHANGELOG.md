@@ -29,9 +29,9 @@ first. This is the audit trail; STATUS.md is the current-state snapshot.
 
 ### Review findings and resolutions
 
-Data-layer milestone ran the rule-1 gate (recorded in session-1 entry): Plan agent
--> Plan-reviewer (APPROVE-WITH-CHANGES, 5 Critical/High resolutions). PR1 then ran
-a senior-quant **post-impl review (FIX-THEN-SHIP)**:
+Data-layer milestone ran the rule-1 gate (recorded in session-1 entry): design plan
+-> design reviewer (APPROVE-WITH-CHANGES, 5 Critical/High resolutions). PR1 then ran
+a senior-quant **post-implementation review (FIX-THEN-SHIP)**:
 
 - **C1 [High, fixed]:** `derive_canonical` stripped `USD` before `BUSD`, so
   `BTCBUSD` wrongly yielded `BTCB` (a silently-wrong cross-venue join key).
@@ -51,7 +51,7 @@ a senior-quant **post-impl review (FIX-THEN-SHIP)**:
   cannot pull a future price; `make_label_horizons` has no partial-label
   lookahead and satisfies cv.py's `_require_label_horizons` + purge predicate; the
   dedup is order-deterministic via the stable `_ingest_idx`; every Critical/High
-  Plan-review resolution is present in code, not narrated.
+  design review resolution is present in code, not narrated.
 
 ### Verification (against real data, not just mocks)
 
@@ -80,7 +80,7 @@ a senior-quant **post-impl review (FIX-THEN-SHIP)**:
   numerical results (8 tests, all green; Bailey-LdP 2014 DSR = 0.7657 vs the
   0.766 pin; CPCV(6,2) = 5 paths; bootstrap seed-determinism).
 - **Week-1 data-access spike** run end-to-end. WRDS: zero setup on the machine,
-  entitlement not autonomously confirmable, non-redistributable even if entitled.
+  entitlement not confirmable without the user's WRDS login, non-redistributable even if entitled.
   Crypto: OKX + Hyperliquid live and US-reachable; Binance Vision S3 dumps
   (checksummed, from 2020-01) reproducible and US-reachable; live Binance/Bybit
   APIs geo-blocked from the US IP.
@@ -89,28 +89,28 @@ a senior-quant **post-impl review (FIX-THEN-SHIP)**:
 
 ### Review findings and resolutions
 
-The lead-track fork ran the rule-1 process: a 4-member council + adversarial
-verifier.
+The lead-track fork ran the rule-1 process: a four-lens review + adversarial
+adversarial cross-check.
 
-- **Council (Realist / Quant / Builder / Growth): unanimous Track B, HIGH
+- **Four-lens review (realist, quant, builder, growth): unanimous Track B, HIGH
   confidence, identical flip condition** (confirm BOTH WRDS entitlement AND a
   pure vol-desk target). Recorded in ADR 0001. No dissent to resolve.
-- **Verifier C1 [Critical, accepted]:** the cost model, capacity curve, and kill
+- **Cross-check C1 [Critical, accepted]:** the cost model, capacity curve, and kill
   gate must be parameterised to a genuinely US-TRADEABLE venue, not the Binance
   data venue, or the kill gate runs against costs that cannot be incurred.
   Resolution: locked decision 3 in ADR 0001; the cost-model milestone picks a
   US-tradeable venue with a real fee schedule.
-- **Verifier H1 [High, accepted]:** restructure the user escalation so career
+- **Cross-check H1 [High, accepted]:** restructure the user escalation so career
   target is the PRIMARY question, WRDS conditional. Resolution: the user-facing
   question leads with career target; WRDS is the conditional follow-up.
-- **Verifier H2 [High, accepted]:** portfolio-redundancy risk (a second
+- **Cross-check H2 [High, accepted]:** portfolio-redundancy risk (a second
   reproducible null must show range, not repeat the momentum null). Resolution:
   positioning in ADR 0001 decision 8 + the additivity argument (different market,
   different premium, retail-tradeable, risk-engineering contribution).
-- **Verifier M1 [Medium, accepted]:** add crypto landmines to the risk register
+- **Cross-check M1 [Medium, accepted]:** add crypto landmines to the risk register
   (US venue access, both-legs financing + capital tie-up, exchange-solvency fat
   tail, coin/venue survivorship). Resolution: ADR 0001 locked decision 6.
-- **Verifier note [accepted]:** the 4-0 unanimity is partly over-determined (all
+- **Cross-check note [accepted]:** the 4-0 unanimity is partly over-determined (all
   lenses key off the non-redistributable-data fact), so confidence is discounted
   from "4-0" to "strong but single-fact-dominated." The career-target escalation
   is the honest hedge.
@@ -118,20 +118,20 @@ verifier.
 ### Career-target fork resolved
 
 - Asked the user (career target is the only input that could promote Track A).
-  The user deferred to the agent's judgment ("make the decision"). Track B is
+  The user deferred the call ("make the decision"). Track B is
   LOCKED; framing default is broad / systematic / reproducibility-first; no
   WRDS/OptionMetrics chase. STATUS + memory updated.
 
-### Data-layer milestone: planned + Plan-reviewed (rule 1)
+### Data-layer milestone: planned + design-reviewed (rule 1)
 
-- **Plan agent (senior quant-infra architect)** produced a file-by-file data-layer
+- **design plan (senior quant-infra architect)** produced a file-by-file data-layer
   plan grounded in the live-verified vendor facts. Empirical groundwork confirmed:
   Binance Vision funding zips download + checksum-verify (schema
   `[calc_time, funding_interval_hours, last_funding_rate]`, 94 rows for 2020-01);
   OKX funding history does NOT page back past ~2021 (so it is live/recent only,
   not the long-history backbone); Hyperliquid funds HOURLY (not 8h) with a thin
   spot leg. Design captured in `docs/research/0001-data-layer-design.md`.
-- **Plan-reviewer (senior quant/data-infra)** returned APPROVE-WITH-CHANGES after
+- **design reviewer (senior quant/data-infra)** returned APPROVE-WITH-CHANGES after
   probing the live endpoints itself. Findings and resolutions (all accepted):
   - **C1 [Critical]:** the plan's OKX realized-gate premise was FACTUALLY WRONG
     (the `/funding-rate-history` head row is already settled, not future; the
@@ -164,7 +164,7 @@ verifier.
 ### Verification (against real behaviour, not just mocks)
 
 - Crypto endpoints hit live from the machine (real OKX JSON + real geo-block
-  responses confirm the network path and the findings). The Plan-reviewer
+  responses confirm the network path and the findings). The design reviewer
   independently re-probed OKX/Binance live and corrected the OKX gate premise.
 - Vendored stack imported and executed in the venv: DSR canonical pin reproduced
   to 1e-3; CPCV path count + bootstrap determinism confirmed.

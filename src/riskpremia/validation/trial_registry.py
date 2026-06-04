@@ -1,8 +1,8 @@
 # =============================================================================
 # VENDORED from the sibling project pit-backtest (commit edad904), module
-# src/pit_backtest/validation/trial_registry.py. Copied except for this
-# header and behaviour-preserving ruff autofixes; fidelity pinned by
-# tests/unit/test_vendored_stack.py.
+# src/pit_backtest/validation/trial_registry.py. Copied except for this header
+# and behaviour-preserving normalizations (ruff autofixes, docstring wording);
+# fidelity pinned by tests/unit/test_vendored_stack.py.
 # SQLite WAL-backed trial registry feeding the Deflated-Sharpe trial count. Stdlib-only.
 # pit-backtest holds the authoritative unit tests for this code; RiskPremia
 # re-runs an equivalent acceptance check (tests/unit/) to confirm the copy is
@@ -85,7 +85,7 @@ class TrialRegistry:
         # bool is an int subclass; exclude it so naive_effective_n=True does
         # not slip through as n_effective=1 (True < 1 is False). record()
         # defends every other numeric input, so the one construction-time
-        # integer is guarded symmetrically (post-impl reviewer Medium 1).
+        # integer is guarded symmetrically (post-implementation review Medium 1).
         if not isinstance(naive_effective_n, int) or isinstance(
             naive_effective_n, bool
         ):

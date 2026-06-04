@@ -2,14 +2,14 @@
 
 Status: Accepted.
 Date: 2026-06-03.
-Authors: Sam Doane (lead-track decision taken by the agent under the HANDOFF-PROMPT's full-authority mandate, with a 4-member council + adversarial verifier per project rule 1).
+Authors: Sam Doane (lead-track decision made under the project's full-authority scoping mandate, with a four-lens review and an adversarial cross-check per project rule 1).
 
 ## Context
 
 Project RiskPremia must choose between two pre-scoped tracks (full detail in
 `docs/STRATEGY-BRIEF.md`). The choice is a genuine fork, so it runs the rule-1
-process: a 4-member council (Realist / Quant / Builder / Growth) plus an
-adversarial verifier, fed the same evidence dossier. The HANDOFF-PROMPT fixes
+process: a four-lens review (realist, quant, builder, growth) plus an
+adversarial cross-check, fed the same evidence dossier. The project scope fixes
 the decision rule:
 
 - **Track A** (single-name earnings Variance Risk Premium measurement study)
@@ -29,9 +29,9 @@ the decision rule:
   `~/.pgpass` or `.wrds` config, the `wrds` Python package is not installed, and
   there are no WRDS / OptionMetrics / IvyDB breadcrumbs anywhere under
   `OneDrive\Desktop\AI Projects`.
-- **The entitlement is not autonomously confirmable.** Confirming an
+- **The entitlement is not confirmable without the user's WRDS login.** Confirming an
   OptionMetrics IvyDB entitlement requires logging into WRDS with the user's
-  personal credentials (which the agent does not hold and must not request as a
+  personal credentials (which the author does not hold and which must not be requested as a
   secret per rule 7) and checking the subscription. OptionMetrics is a separate,
   expensive WRDS entitlement that many university base subscriptions exclude;
   student summer-access and entitlement scope are both uncertain.
@@ -64,7 +64,7 @@ Empirically probed end-to-end; the funding clock and realized series are real:
   Hyperliquid are not. A US-based retail trader cannot use Binance/Bybit perps
   live, which is real venue-access friction that feeds the risk register.
 
-## The council (4 lenses, unanimous)
+## The four-lens review (unanimous)
 
 All four members chose **Track B at HIGH confidence**, and all four independently
 returned the SAME flip condition: the candidate confirms BOTH an active
@@ -93,9 +93,9 @@ WRDS/OptionMetrics entitlement AND a pure options/vol-desk career target.
   quantification). Biggest risk: "vanilla carry" reads as hype, so the README
   headline must be the decay null + reproducibility, never carry returns.
 
-## The verifier (adversarial audit): ENDORSE-WITH-CAVEATS
+## The adversarial cross-check (adversarial audit): ENDORSE-WITH-CAVEATS
 
-The verifier confirmed the verdict but flagged that the 4-0 unanimity is
+The adversarial cross-check confirmed the verdict but flagged that the 4-0 unanimity is
 partly over-determined (every lens keys off the same dominant fact, the
 non-redistributable data), and surfaced caveats that are now binding on the
 build:
@@ -104,7 +104,7 @@ build:
    Binance-data venue.** The premium's existence and decay are measured on the
    long Binance Vision history, but the cost model, the capacity curve, and the
    kill gate must be parameterised to a venue a US retail trader can actually use
-   (the verifier named Kraken / CME / Hyperliquid / Coinbase). Otherwise the kill
+   (the adversarial cross-check named Kraken / CME / Hyperliquid / Coinbase). Otherwise the kill
    gate runs against costs that cannot be incurred. Make "does net two-leg carry
    survive the post-ETF basis at retail fees on that venue" the explicit early
    kill check.
@@ -117,12 +117,12 @@ build:
    different market (crypto), a different premium (carry, not a maximally-
    arbitraged equity factor), genuinely retail-tradeable, and the contribution is
    the risk engineering + decay quantification, not a backtest number.
-4. **Crypto landmines for the risk register** (none raised by the council): US
+4. **Crypto landmines for the risk register** (none raised by the four-lens review): US
    venue access / backtest-venue mismatch; net carry after BOTH legs' financing +
    capital tie-up; exchange-solvency fat tail (FTX-class); coin/venue
    survivorship in the Binance Vision instrument set (only survivors are dumped).
 
-The steelman the verifier preserved for Track A: a non-reproducible honest null
+The steelman the adversarial cross-check preserved for Track A: a non-reproducible honest null
 is still impressive to a vol desk that HAS OptionMetrics and can re-run it
 internally. That is exactly why career target is the right gate, and why Track A
 is demoted, not deleted.
@@ -131,8 +131,8 @@ is demoted, not deleted.
 
 **Track B (crypto perpetual-futures funding carry, delta-neutral) is the LEAD
 track**, on the decision rule's "no confirmed WRDS, reproducibility + real-money
-+ speed priority" branch, validated by a unanimous council and an
-endorse-with-caveats verifier. Track A is demoted to a one-section "I also
++ speed priority" branch, validated by a unanimous four-lens review and an
+endorse-with-caveats adversarial cross-check. Track A is demoted to a one-section "I also
 examined this; here is the friction-adjusted result and why I deprioritized it,"
 which itself demonstrates kill-early judgment.
 
@@ -195,6 +195,6 @@ soft-pedal.
 ## Status
 
 Accepted. The build begins under this ADR: the data layer + the cost model are
-the first milestones (each via Plan -> Plan-reviewer -> implement -> post-impl
+the first milestones (each via Plan -> design reviewer -> implement -> post-implementation
 reviewer, per rule 1). The career-target question is escalated to the user in
 parallel and does not block the scaffold or the cost-model-first work.

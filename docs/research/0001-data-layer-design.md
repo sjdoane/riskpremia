@@ -1,6 +1,6 @@
-# Data-layer design (post Plan-review), locked scope for implementation
+# Data-layer design (post design review), locked scope for implementation
 
-Status: design locked 2026-06-03 (Plan agent -> senior-quant Plan-reviewer, rule 1).
+Status: design locked 2026-06-03 (design plan -> senior-quant design reviewer, rule 1).
 The ADR (0002) ships with the first implementation PR; this note is the durable
 design + the review resolutions so implementation proceeds without re-derivation.
 
@@ -27,7 +27,7 @@ FUNDING event, not the calendar.
   checksum-verified vs Binance's published CHECKSUM, SHA256-stamped into
   `data/snapshots/manifest.toml`, one derived aggregate artifact committed.
 
-## Plan-review resolutions (all accepted; load-bearing)
+## design review resolutions (all accepted; load-bearing)
 
 The reviewer probed OKX/Binance live and returned APPROVE-WITH-CHANGES. The five
 Critical/High items below are binding on implementation.

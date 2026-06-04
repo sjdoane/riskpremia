@@ -1,9 +1,7 @@
 # Project RiskPremia: strategy brief and stress-tested context
 
 This is the stored context for a new rigorous quant project. It was produced by a
-4-member direction council + 4 parallel strategy researchers + a 3-member
-adversarial stress-test, all run before any code. Read this first, then
-`HANDOFF-PROMPT.md`. The project's spiritual parent is `pit-backtest` (a
+a structured multi-perspective direction review and adversarial stress-test, all run before any code. Read this first. The project's spiritual parent is `pit-backtest` (a
 portfolio-grade event-driven equity backtester with PIT discipline, CPCV,
 Deflated Sharpe, and Almgren cost realism) whose honest worked study showed
 vanilla momentum does NOT beat passive after deflation and costs. That honesty is

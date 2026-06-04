@@ -127,10 +127,13 @@ secrets/
 credentials.json
 service-account*.json
 
-# Local agent / scratch
+# Local scratch
 .claude/local/
 .claude/settings.local.json
 scratch/
 scratch_*.py
 _scratch_*.py
 TODO.local.md
+
+# Internal working notes, not for the public repo.
+HANDOFF-PROMPT.md

@@ -12,7 +12,7 @@ Lead track LOCKED: **Track B (crypto perpetual-futures funding carry,
 delta-neutral), framed as a measurement study.** Repo is on GitHub
 (https://github.com/sjdoane/riskpremia, main pushed). Data-layer **PR1 (typed
 core) is done**: implemented, green (mypy --strict 15 files, ruff, 36 tests,
-em-dash all clean), and post-impl reviewed (FIX-THEN-SHIP; 1 High + 4 Low all
+em-dash all clean), and post-implementation reviewed (FIX-THEN-SHIP; 1 High + 4 Low all
 addressed). On branch `feat/data-layer-pr1-typed-core`, ready to open the PR. No
 strategy logic yet (correct: cost model + random-entry null first).
 
@@ -23,14 +23,13 @@ core deps); without it `to_list()` panics with ZoneInfoNotFoundError.
 ## Lead-track decision (locked in ADR 0001)
 
 - **Track B is the lead.** Reason: no WRDS/OptionMetrics setup exists on the
-  machine and the entitlement is not autonomously confirmable; even if entitled,
+  machine and the entitlement is not confirmable without the user's WRDS login; even if entitled,
   OptionMetrics raw data is non-redistributable, which breaks the reproducibility
   brand. Crypto funding data is free and empirically reproducible from a US IP.
-- A unanimous 4-member council (Realist/Quant/Builder/Growth, all HIGH
-  confidence) and an endorse-with-caveats verifier backed Track B. Full record
+- A unanimous four-lens review (realist, quant, builder, growth, all high confidence) and an endorse-with-caveats adversarial cross-check backed Track B. Full record
   in `docs/decisions/0001-lead-track-selection.md`.
 - **Career-target fork RESOLVED (2026-06-03):** asked, and the user deferred to
-  the agent's judgment ("make the decision"). Track B is LOCKED. Framing default:
+  the project lead's judgment ("make the decision"). Track B is LOCKED. Framing default:
   broad / systematic / reproducibility-first (the Track-B-optimal audience). No
   WRDS/OptionMetrics chase; Track A stays the "also examined" contrast section.
 
@@ -75,7 +74,7 @@ REAL-MONEY deployment:
 
 ## Next (in order)
 
-The data-layer milestone is PLANNED and Plan-REVIEWED (design locked in
+The data-layer milestone is PLANNED and design-reviewed (design locked in
 `docs/research/0001-data-layer-design.md`; the reviewer probed live data and
 caught a factual error in the OKX gate, plus 4 more Critical/High findings, all
 resolved in that doc). Scope was cut per rule 6 so the cost model is not blocked.
@@ -85,7 +84,7 @@ resolved in that doc). Scope was cut per rule 6 so the cost model is not blocked
 2. **Data-layer PR2:** `binance_vision.py` (BTCUSDT funding + matched MARK + spot)
    + a `network` live checksum-verify test. Ships ADR 0002. Inherits the PR2
    carry-overs from the reviews: pre-committed BTC/ETH survivor universe, the
-   matched-mark-vs-spot basis, dedup price frames at the source (post-impl L4),
+   matched-mark-vs-spot basis, dedup price frames at the source (post-implementation L4),
    the clamp-incidence diagnostic.
 3. **Data-layer PR3:** `okx.py` realized-history single fetch + the Binance-vs-OKX
    funding delta join (for the kill-gate venue).
@@ -113,7 +112,7 @@ full S3 pagination generality.
 
 ## Hard rules (full text in README + the portfolio session_rules)
 
-Review agents + council on every meaningful chunk/fork; keep STATUS/CHANGELOG/
+Independent reviews plus a multi-perspective panel on every meaningful chunk/fork; keep STATUS/CHANGELOG/
 memory/ADRs current; no em-dashes (sweep before commit); kill-early with the
 criterion above; Windows-first PowerShell + absolute paths; clean venv only;
 verify against REAL data, cost model first; no secrets in chat; pinned deps +

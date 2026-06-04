@@ -2,8 +2,8 @@
 # VENDORED from the sibling project pit-backtest (commit edad904), module
 # src/pit_backtest/validation/cv.py. Purged k-fold / walk-forward / CPCV
 # splitters with embargo (Lopez de Prado 2018). Deps: polars, attrs. Copied
-# except for this header and behaviour-preserving ruff autofixes (import
-# ordering, collections.abc); fidelity pinned by tests/unit/test_vendored_stack.py.
+# except for this header and behaviour-preserving normalizations (ruff autofixes,
+# docstring wording); fidelity pinned by tests/unit/test_vendored_stack.py.
 # pit-backtest holds the authoritative unit tests for this code; RiskPremia
 # re-runs an equivalent acceptance check (tests/unit/) to confirm the copy is
 # faithful. "ADR NNNN" references in the docstring below point to pit-backtest's
@@ -284,7 +284,7 @@ class WalkForwardSplitter(CVSplitter):
     Yields exactly one Split: training obs strictly before `train_end`,
     test obs at or after `test_start`. No purge or embargo (the
     single-window baseline does not model label-horizon leakage). Per
-    the M4 PR 3 Plan-reviewer Medium 1, `label_horizons` is validated
+    the M4 PR 3 design reviewer Medium 1, `label_horizons` is validated
     for LENGTH parity only (so a caller cannot pass a mismatched-shape
     series) but its values are NOT read; full dtype/null validation
     would invent a non-functional dependency.
@@ -295,7 +295,7 @@ class WalkForwardSplitter(CVSplitter):
     test side (all observations before `train_end`), and height-0
     observations yield one Split with empty train and test tuples rather
     than raising. Downstream consumers treat an empty-test Split as a
-    no-op path (post-impl reviewer Medium 2).
+    no-op path (post-implementation review Medium 2).
     """
 
     def __init__(self, train_end: datetime, test_start: datetime) -> None:

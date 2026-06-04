@@ -70,7 +70,7 @@ dumps and OKX are not.)
 
 - [STATUS.md](STATUS.md) is the current state and what is deferred (read first).
 - [docs/decisions/](docs/decisions/) is the ADR log; [0001](docs/decisions/0001-lead-track-selection.md)
-  is the lead-track decision, the council and verifier record, and the kill criterion.
+  is the lead-track decision, the four-lens review and adversarial cross-check record, and the kill criterion.
 - [docs/research/0001-data-layer-design.md](docs/research/0001-data-layer-design.md)
   is the reviewed data-layer design.
 - [docs/STRATEGY-BRIEF.md](docs/STRATEGY-BRIEF.md) is the stress-tested context (the two
@@ -83,9 +83,9 @@ weaker track on honest evidence is the point.
 
 ## How it is built (process)
 
-Every meaningful component goes through a Plan agent, a senior-quant Plan-reviewer,
-implementation, and a post-impl reviewer; every fork (the lead-track choice) goes
-through a four-member council plus an adversarial verifier. Critical and High
+Every meaningful component goes through a design plan, an independent senior-quant design review,
+implementation, and a post-implementation review; every fork (the lead-track choice) goes
+through a four-lens review plus an adversarial cross-check. Critical and High
 findings are addressed before anything is marked done, and the finding plus its
 resolution is recorded in the CHANGELOG. The analytics and validation stack
 (PSR/DSR/MinTRL, purged CPCV, stationary block bootstrap, trial registry) is
