@@ -4,7 +4,7 @@ Single source of truth for where Project RiskPremia is and what is deferred.
 Read this FIRST on any new session, then the ADRs it points to. Update after
 every meaningful work block (rule 2).
 
-Last updated: 2026-06-03 (session 2: data layer complete, kill-gate design locked).
+Last updated: 2026-06-03 (session 3: PR4a per-trade P&L math shipped + reviewed).
 
 ## One-line state
 
@@ -12,10 +12,13 @@ A reproducible, intellectually-honest MEASUREMENT study of the crypto
 perpetual-futures funding-carry risk premium. Lead track LOCKED: **Track B**
 (crypto funding carry, delta-neutral), ADR 0001. Repo:
 https://github.com/sjdoane/riskpremia. **The reproducible multi-venue data layer is COMPLETE** (PR1+PR2+PR3
-merged). **The cost model + random-entry null (the kill gate) is DESIGNED and
-deeply reviewed: ADR 0003.** NEXT: implement PR4a (the per-trade P&L math) then
-PR4b (the null + the first net-of-cost kill number). No strategy logic yet (by
-design: the cost model + null come before any signal, rule 6).
+merged). **The cost model + the per-trade carry P&L (PR4a) are DONE** (the
+`VenueCostModel`, `simulate_trade`/`simulate_batch`, the funding-sign + index-identity
++ P&L-conservation kill_gate invariants; on the branch `feat/cost-model-pr4a-per-trade-pnl`).
+**NEXT: PR4b** (the random-entry null + `execution/{scoring,exhibit}.py` +
+`scripts/run_null_gate.py` + the CPCV embargo>=H glue) -> the FIRST net-of-cost
+kill number. No selection signal yet (by design: the cost model + null come before
+any signal, rule 6).
 
 ## Dev commands (Windows PowerShell; the venv is run DIRECTLY)
 
@@ -44,10 +47,16 @@ then `uv pip install --python $py -e ".[dev]"`.
   reproducibility), `errors.py`, `cross_venue.py` (the Binance-vs-OKX funding
   delta), `sources/binance_vision.py` (long-history backbone, checksummed),
   `sources/okx.py` (live kill-gate venue).
-- `execution/` + `strategy/`: only docstrings so far (the kill gate goes here).
-- 62 tests (57 offline + 5 live `network`); mypy --strict / ruff / em-dash clean;
-  CI green (`.github/workflows/ci.yml`, installs `.[dev]`, runs ruff + mypy +
-  pytest, network tests skipped).
+- `execution/`: PR4a DONE. `errors.py` (loud-failure hierarchy), `cost.py` (the
+  `VenueCostModel` + cited base-tier fee schedules: Kraken/Hyperliquid tradeable,
+  Binance/OKX reference; round-trip both legs both sides + the 2N financing on the
+  real wall-clock hold; provisional conservative spreads), `carry.py`
+  (`funding_window_indices`/`valid_entry_range` = the single window source of truth,
+  `simulate_trade`, `simulate_batch`, `per_interval_pnl` conservation harness,
+  `price_pnl_contamination` = the ADR A3 guard). `strategy/`: still docstrings (PR4b).
+- 91 tests (83 offline + 8 live `network`); mypy --strict 23 files / ruff / em-dash
+  clean; CI green (`.github/workflows/ci.yml`, installs `.[dev]`, runs ruff + mypy +
+  `pytest -m "not network"`, so CI runs the 83 offline).
 
 The data layer yields, for a perp, an aligned **funding + perp-mark + spot +
 basis** series on the funding-event clock that feeds the vendored
@@ -87,12 +96,17 @@ random-entry NULL through it, produce the first net-of-cost number (rule 6). ADR
   `range(i+1, i+H+1)` AND identical to the `make_label_horizons` `dt.shift(-H)`
   label (verified correct in review), with a P&L-conservation cross-check.
 
-PR4a = `execution/{errors,cost,carry}.py` + the per-trade math tests (the sign
-fixture, the index-identity kill_gate test, the financing term). PR4b =
-`strategy/null.py` + `execution/{scoring,exhibit}.py` + `scripts/run_null_gate.py`
-+ the embargo>=H glue + the first kill number across venues. Model a few
-US-tradeable venues (Kraken Futures, Hyperliquid; Binance/OKX as non-tradeable
-reference) so the gate is a cost-sensitivity surface.
+PR4a (DONE) = `execution/{errors,cost,carry}.py` + the per-trade math tests (the
+sign fixture, the index-identity kill_gate test, the wall-clock financing term);
+see ADR 0003 amendments A1 to A3. PR4b (NEXT) = `strategy/null.py` +
+`execution/{scoring,exhibit}.py` + `scripts/run_null_gate.py` + the embargo>=H glue
++ the first kill number across venues. The headline null is the always-on passive
+carry (every eligible event an entry); the DSR headline is on a NON-overlapping
+series (one trade per H intervals, `simulate_batch` strided by H), cost booked
+LUMPY (the per-period series), CPCV embargo forced >= H, recorded as a CONTROL
+trial family (so the kill number is PSR(0) at this pre-signal stage), reported with
+the funding-sign-regime decomposition and the venue cost-sensitivity surface (the
+cost models already exist in `execution/cost.py`).
 
 ## Pre-registered kill criterion (frozen UPFRONT; ADR 0001)
 
