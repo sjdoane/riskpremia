@@ -4,7 +4,9 @@ Single source of truth for where Project RiskPremia is and what is deferred.
 Read this FIRST on any new session, then the ADRs it points to. Update after
 every meaningful work block (rule 2).
 
-Last updated: 2026-06-04 (session 4: PIVOTED to the crypto VRP study (ADR 0004); the measurement floor (PR5a) is built and the first VRP is measured + positive; PR5b shipped the committed measurement artifact + figures + the DVOL/spot reproducibility-fixture manifest stamp; PR5c shipped the Tardis Deribit option-chain loader; PR5d shipped the delta-hedged-option cost model; PR5e shipped the per-trade short-variance option P&L with the inverse coin settlement; PR5f shipped the Layer-ii gate + the VERDICT: NON-VIABLE, the pre-registered cost/peso-bounded honest null).
+Last updated: 2026-06-04 (session 4: the VRP study completed both layers (Layer i positive measurement, Layer ii NON-VIABLE null, PR5a-PR5f); PIVOTED to Study 3, the CTREND crypto cross-sectional trend factor (ADR 0005), per the pivot-on-failure rule + Sam's directive to keep pivoting until a strategy survives the gate; the build is starting).
+
+**Study 3 (CTREND, ADR 0005, the active study): a faithful replication-and-stress of the one peer-reviewed crypto cost-survival claim (Fieberg et al., JFQA 2025) under the project's REALISTIC retail cost model + a 2022-2026 OOS extension + proper deflation. The FIRST FITTED signal in the project (the CPCV + trial-registry + DSR deflation become load-bearing). A net-of-cost Deflated-Sharpe PASS = a strategy that clears the gate (cross-checked before belief); a FAIL = an honest falsification of the published claim. Build order: PR1 the point-in-time multi-coin universe data layer, PR2 the trend-feature signal + cross-sectional elastic-net aggregation, PR3 the backtest + the kill gate + the verdict. Read ADR 0005 first.**
 
 ## One-line state
 
