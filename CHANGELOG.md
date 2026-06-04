@@ -57,10 +57,57 @@ verifier.
   from "4-0" to "strong but single-fact-dominated." The career-target escalation
   is the honest hedge.
 
+### Career-target fork resolved
+
+- Asked the user (career target is the only input that could promote Track A).
+  The user deferred to the agent's judgment ("make the decision"). Track B is
+  LOCKED; framing default is broad / systematic / reproducibility-first; no
+  WRDS/OptionMetrics chase. STATUS + memory updated.
+
+### Data-layer milestone: planned + Plan-reviewed (rule 1)
+
+- **Plan agent (senior quant-infra architect)** produced a file-by-file data-layer
+  plan grounded in the live-verified vendor facts. Empirical groundwork confirmed:
+  Binance Vision funding zips download + checksum-verify (schema
+  `[calc_time, funding_interval_hours, last_funding_rate]`, 94 rows for 2020-01);
+  OKX funding history does NOT page back past ~2021 (so it is live/recent only,
+  not the long-history backbone); Hyperliquid funds HOURLY (not 8h) with a thin
+  spot leg. Design captured in `docs/research/0001-data-layer-design.md`.
+- **Plan-reviewer (senior quant/data-infra)** returned APPROVE-WITH-CHANGES after
+  probing the live endpoints itself. Findings and resolutions (all accepted):
+  - **C1 [Critical]:** the plan's OKX realized-gate premise was FACTUALLY WRONG
+    (the `/funding-rate-history` head row is already settled, not future; the
+    predicted rate is in the separate `/funding-rate` endpoint). Resolution: gate
+    on `realizedRate is not None AND method == "current_period" AND window_end <
+    now` (strict `<`); never read `/funding-rate`; exclude the predicted field
+    from the record path.
+  - **C2 [Critical]:** Binance funding is a clamped interest + premium composite;
+    reporting it as "the premium" is a category error. Resolution: document it as
+    the realized clamped cash flow, keep the `premium` component, add a
+    clamp-incidence diagnostic.
+  - **C3 [Critical]:** the basis must use the perp MARK price vs a matched,
+    snapshotted, same-quote spot product; Hyperliquid basis set null (off-venue
+    spot not yet reproducible).
+  - **C4 [Critical]:** Binance Vision survivorship biases the premium up; v1
+    headline universe is a pre-committed survivor set (BTCUSDT then ETHUSDT), NOT
+    a multi-coin median; caveated in ADR 0002 + methodology.
+  - **H5 [High]:** quantify the venue-basis confound (emit a Binance-vs-OKX
+    funding delta on the matched grid; kill gate on OKX-realized, decay headline
+    on Binance), plus determinism/test items (tz-aware dtype parity assertion,
+    horizon gap-guard + length-parity assert, Decimal-vs-Float64 basis test,
+    `extra="forbid"` only on the immutable CSV, committed regeneration script +
+    byte-equality test, pinned spot-ETF regime constant, tolerance-banded
+    modal-gap warning, realized-aware dedup).
+  - **Scope [accepted]:** the reviewer's CUT TO SHIP FASTER (BTCUSDT Binance
+    backbone + OKX-realized delta; defer Hyperliquid, retention probes,
+    multi-coin, full pagination) roughly halves pre-cost-model LOC, honoring
+    rule 6. PR split locked in the design doc (PR1 heart, PR2 Binance, PR3 OKX).
+
 ### Verification (against real behaviour, not just mocks)
 
 - Crypto endpoints hit live from the machine (real OKX JSON + real geo-block
-  responses confirm the network path and the findings).
+  responses confirm the network path and the findings). The Plan-reviewer
+  independently re-probed OKX/Binance live and corrected the OKX gate premise.
 - Vendored stack imported and executed in the venv: DSR canonical pin reproduced
   to 1e-3; CPCV path count + bootstrap determinism confirmed.
 - Em-dash sweep clean on all new files (verified before commit).
