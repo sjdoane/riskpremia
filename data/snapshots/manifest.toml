@@ -61,3 +61,16 @@ sha256 = "e0657ac9ec2c1828ffcefe07c071d265583b14b56ee73e5dbf7f9248966db90a"
 size_bytes = 21110
 rows = 1247
 note = "Committed in-repo reproducibility fixture (date,dvol_close). DVOL is a live/as-of series with no published checksum; this SHA256 attests tamper-evidence of the committed daily closes, not vendor byte-fidelity. Regenerate via scripts/build_vrp_artifact.py."
+
+[[snapshot]]
+name = "vrp-straddle-entries"
+venue = "tardis"
+instrument = "BTCUSDT"
+kind = "reproducibility_fixture"
+relpath = "tests/data/vrp_straddle_entries.csv"
+source_url = "https://datasets.tardis.dev/v1/deribit/options_chain/ (first-of-month; near-ATM call+put at the ~30d expiry per month)"
+fetched_utc = 2026-06-04T18:57:24+00:00
+sha256 = "4a144a949756903dbdd2300436b2f7710c8c1119f7e5c95e440eb2c5a4f67236"
+size_bytes = 6113
+rows = 42
+note = "Committed in-repo reproducibility fixture: the selected monthly short-straddle entry quotes for the Layer-ii gate; the realized expiry underlying is looked up from the committed spot fixture by expiry date."

@@ -4,7 +4,7 @@ Single source of truth for where Project RiskPremia is and what is deferred.
 Read this FIRST on any new session, then the ADRs it points to. Update after
 every meaningful work block (rule 2).
 
-Last updated: 2026-06-04 (session 4: PIVOTED to the crypto VRP study (ADR 0004); the measurement floor (PR5a) is built and the first VRP is measured + positive; PR5b shipped the committed measurement artifact + figures + the DVOL/spot reproducibility-fixture manifest stamp; PR5c shipped the Tardis Deribit option-chain loader; PR5d shipped the delta-hedged-option cost model; PR5e shipped the per-trade short-variance option P&L with the inverse coin settlement that makes the crash tail honest).
+Last updated: 2026-06-04 (session 4: PIVOTED to the crypto VRP study (ADR 0004); the measurement floor (PR5a) is built and the first VRP is measured + positive; PR5b shipped the committed measurement artifact + figures + the DVOL/spot reproducibility-fixture manifest stamp; PR5c shipped the Tardis Deribit option-chain loader; PR5d shipped the delta-hedged-option cost model; PR5e shipped the per-trade short-variance option P&L with the inverse coin settlement; PR5f shipped the Layer-ii gate + the VERDICT: NON-VIABLE, the pre-registered cost/peso-bounded honest null).
 
 ## One-line state
 
@@ -15,21 +15,27 @@ pivot-on-failure rule, **the active study is now the crypto VARIANCE RISK PREMIU
 (VRP), ADR 0004**, in two layers: (i) a reproducible index-level MEASUREMENT (Deribit
 DVOL implied variance minus realized variance from the Binance Vision klines), and
 (ii) a cost-gated short-variance tradeable test, pre-registered as a likely
-cost/peso-bounded null. **Layer i (PR5a) is BUILT** (the DVOL source, the
-realized-variance estimator, the non-overlapping headline). **First measured VRP**
-(BTC, 2022-01..2025-06, 30-day, real data): mean variance premium 0.087, 95%
-bootstrap CI [0.033, 0.119] CLEARING zero (overlap-honest), 70% of days positive,
-pre-ETF 0.101 -> post-ETF 0.059 (a decay paralleling the carry). The VRP is a real,
-positive premium; the open question is whether it survives option-selling costs +
-the peso tail (Layer ii). Repo: https://github.com/sjdoane/riskpremia. PR5a on
-`feat/vrp-dvol-and-measurement`.
+cost/peso-bounded null. **BOTH LAYERS ARE NOW BUILT.** Layer i (the MEASUREMENT,
+PR5a-PR5b): the first measured VRP (BTC, 2022-01..2025-06, 30-day) is mean variance
+premium 0.087, 95% bootstrap CI [0.033, 0.119] CLEARING zero (overlap-honest), 70% of
+days positive, pre-ETF 0.101 -> post-ETF 0.059 (a real, positive, significant premium;
+committed regenerable artifact + figures). **Layer ii (the tradeable test, PR5c-PR5f):
+VERDICT NON-VIABLE, the pre-registered cost/peso-bounded honest null.** A systematic
+monthly short straddle (delta-hedged, held to expiry) over 2022-2025 nets a Deflated
+Sharpe of 0.30 (below the 0.95 bar) with a slightly NEGATIVE mean, and a catastrophic
+inverse-settlement crash tail (the worst in-sample month loses 2.7x the posted margin; a
+cited -50% one-day crash loses 6.1x). The honest conclusion: the VRP is real and
+positive (Layer i), but the static held-to-expiry straddle is a path-blind directional
+bet that does NOT harvest it after costs, and the un-modeled path rehedge + the peso tail
+make it non-viable for retail. The measurement floor is the study's positive headline.
+Repo: https://github.com/sjdoane/riskpremia. PR5f on `feat/vrp-short-variance-gate`.
 
 ## Dev commands (Windows PowerShell; the venv is run DIRECTLY)
 
 ```
 $env:PYTHONIOENCODING="utf-8"
 $py = "C:\Users\SamJD\.venvs\riskpremia\Scripts\python.exe"
-& $py -m pytest -q -m "not network" # 163 pass (offline); never touch the off-limits pit-backtest venvs
+& $py -m pytest -q -m "not network" # 174 pass (offline); never touch the off-limits pit-backtest venvs
 & $py -m pytest -q -m network       # live: Binance Vision + OKX + Deribit DVOL + Tardis (the real-data proof)
 & $py -m mypy                       # strict, src + scripts
 & $py -m ruff check src tests scripts
@@ -79,7 +85,11 @@ matplotlib, render-only; CI installs only `.[dev]` and skips the figure render t
   short-variance P&L in COIN per contract, INVERSE settlement (`intrinsic_usd / S_T`) +
   inverse-perp static hedge (`delta * (1 - S0/S_T)`), the conservation guard + the
   `path_rehedge_unmodeled` marker + `rehedge_cost_sensitivity`.
-- 163 offline + 12 live `network` tests (the figure render test runs locally, skipif
+- `vrp/gate.py` + `scripts/{build_vrp_entries,run_vrp_gate}.py` (PR5f): the Layer-ii
+  short-straddle backtest + the regime tail-loss table + the cited peso shock + the
+  NON-VIABLE verdict; the committed entries fixture (`tests/data/vrp_straddle_entries.csv`,
+  SHA-stamped) + the gate artifact (`artifacts/vrp_short_variance_gate.json`).
+- 174 offline + 12 live `network` tests (the figure render test runs locally, skipif
   in CI); mypy --strict (src + scripts) / ruff / em-dash clean; CI green
   (`.github/workflows/ci.yml`, installs `.[dev]`, runs ruff + mypy + `pytest -m "not
   network"`, so CI runs the offline set).
@@ -127,17 +137,18 @@ short-variance P&L (`simulate_option_trade` + `OptionTradePnL`), in COIN per con
 the INVERSE coin settlement (`intrinsic_usd / S_T`) + the inverse-perp static hedge
 (`delta * (1 - S0/S_T)`); the design review REJECTED the first (linear) design for
 understating the put crash tail ~10x, and the inverse fix makes the peso tail honest
-(a 90% crash on a short put settles ~9x the notional). Next steps:
-1. Layer ii FINALE (PR5f): the short-variance random-entry null + the cost/peso-bounded
-   gate + the regime-conditional tail-loss table + the verdict (reuse `strategy/null.py`
-   + `execution/scoring.py` + the kill-gate discipline; a `scripts/run_vrp_gate.py`). It
-   gathers the first-of-month entry snapshots across the VRP window (select a near-ATM
-   option per month via the Tardis loader; the realized expiry underlying from Binance
-   Vision), runs `simulate_option_trade` per entry, and COMMITS the monthly snapshot
-   fixtures (the deferred reproducibility artifact, SHA256-stamped) now that the
-   months/expiries are fixed. Headline = the measurement + the regime tail-loss table,
-   NEVER a short-vol Sharpe; the un-measurable path-rehedge slippage is the dominant
-   un-modeled cost (named on `OptionTradePnL` via `path_rehedge_unmodeled`; ADR 0004).
+(a 90% crash on a short put settles ~9x the notional). PR5f (DONE): the Layer-ii gate +
+the VERDICT (`vrp/gate.py` + `scripts/{build_vrp_entries,run_vrp_gate}.py`); 42 monthly
+short straddles gathered (0 dropped), the committed entries fixture + the gate artifact.
+**VERDICT: NON-VIABLE** (DSR 0.30 below the bar, slightly negative mean, worst in-sample
+month 2.7x the margin, cited peso shocks 3.3x/6.1x). Layer ii is complete; both layers
+are done. Next steps:
+1. PR5g (the recruiter-facing polish, deferred): Layer-ii figures (the monthly short-
+   straddle net + the loss-distribution / crash tail) rendered from the committed gate
+   artifact (the `figures` extra, lazy, a skipif render test, mirroring the Layer-i
+   figures), plus folding BOTH layers into the README front door (a results-at-a-glance
+   table: the positive Layer-i measurement + the Layer-ii non-viable null; the README
+   banner still says "Layer ii is next" and needs the reframe).
 2. The Study-1 (carry) write-up (README results + figures) is the OPTIONAL deferred
    deliverable; the pivot took priority per Sam's directive.
 
