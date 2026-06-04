@@ -22,6 +22,7 @@ from riskpremia.data.clock import (
     normalize_funding_frame,
     spot_frame,
 )
+from riskpremia.data.cross_venue import binance_okx_funding_delta
 from riskpremia.data.errors import (
     ChecksumMismatchError,
     DataLayerError,
@@ -62,6 +63,7 @@ __all__ = [
     "SpotPriceRecord",
     "Venue",
     "VenueFetchError",
+    "binance_okx_funding_delta",
     "build_observation_frame",
     "compute_sha256",
     "derive_canonical",

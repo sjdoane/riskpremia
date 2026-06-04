@@ -97,7 +97,7 @@ number on its own. Dependencies are pinned to exact patch; mypy runs strict.
 ```powershell
 # Dedicated venv (kept outside the synced tree)
 uv venv --python 3.12 C:\Users\SamJD\.venvs\riskpremia
-uv pip install --python C:\Users\SamJD\.venvs\riskpremia\Scripts\python.exe -e ".[dev,dataops]"
+uv pip install --python C:\Users\SamJD\.venvs\riskpremia\Scripts\python.exe -e ".[dev]"
 C:\Users\SamJD\.venvs\riskpremia\Scripts\python.exe -m pytest -q
 ```
 

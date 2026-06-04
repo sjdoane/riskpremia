@@ -93,6 +93,45 @@ Hyperliquid; the OKX retention-probe machinery; the multi-coin universe; the
 artifact (a later PR). None block the cost model + the random-entry null, which
 are next.
 
+
+## PR3 amendment: the OKX live tier + the venue delta
+
+PR3 adds the US-reachable kill-gate venue and the venue-basis measurement.
+
+9. **OKX realized gate (design review finding 1).** `data/sources/okx.py` reads
+   only the SETTLED `funding-rate-history` endpoint (never the predicted
+   `/funding-rate`), and `boundary.PydanticOKXFundingRow.to_record` accepts a row
+   only when `realizedRate` is present, `method == "current_period"`, and the
+   settlement instant is strictly before now; it uses `realizedRate` (the paid
+   rate), never the predicted `fundingRate`. `extra="ignore"` on the live JSON so
+   OKX adding a field does not crash the tier.
+
+10. **OKX is recent-only (verified live).** The public funding history pages back
+    about 93 days (3 months), then exhausts; `fetch_funding` returns what is
+    available and does not error past the floor. OKX is therefore the live/recent
+    source for the kill gate and a forward paper-trade, NOT a long-history source.
+
+11. **Binance-vs-OKX funding delta (finding 5).** `data/cross_venue.py` measures
+    the venue basis directly on the overlap: `funding_rate_binance -
+    funding_rate_okx` on the matched settlement grid. Because OKX is recent-only,
+    the delta is measured on the recent overlap and applied as an adjustment to
+    the longer Binance-based estimate, so the kill gate reflects what a US trader
+    actually receives. Live, the basis is small (median under 0.1% per 8h).
+
+12. **GRID-SNAP gotcha (verified live).** Binance Vision `calc_time` carries a few
+    milliseconds of jitter around the settlement instant (e.g. 00:00:00.003),
+    while OKX `fundingTime` is the clean boundary. A naive timestamp join loses
+    about half the events; the delta rounds each `dt` to the funding-interval grid
+    before joining. Within-venue series keep the raw jittered `dt` (harmless for
+    the 8h-spaced CPCV clock); only the CROSS-venue join snaps.
+
+13. **Stdlib-only fetch.** OKX (and a future Hyperliquid) fetch with the stdlib
+    (`urllib` + `json`), like the Binance Vision source, so the whole data layer
+    has zero third-party fetch surface; the unused `httpx` dependency and the
+    `dataops` extra are removed. The OKX endpoint 403s the default
+    `Python-urllib` User-Agent, so a descriptive User-Agent is sent.
+
+
 ## Status
 
 Accepted. PR2 implements decisions 5, 7, 8 (and the PR1-shipped 1 to 4, 6
