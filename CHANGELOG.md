@@ -3,6 +3,114 @@
 What shipped, plus every review finding and its resolution (rule 2). Newest
 first. This is the audit trail; STATUS.md is the current-state snapshot.
 
+## 2026-06-03, session 3: the kill gate, PR4a (the per-trade P&L math)
+
+### Cost model + per-trade carry P&L (PR4a) shipped on `feat/cost-model-pr4a-per-trade-pnl`
+
+The first half of the kill gate: the per-trade math everything downstream is built
+on, no RNG and no IO. Three new modules under `src/riskpremia/execution/`:
+
+- `errors.py`: the loud-failure hierarchy (`ExecutionError` / `CostModelError` /
+  `CarryComputationError`), mirroring `data/errors.py`.
+- `cost.py`: a frozen `VenueCostModel` charging both legs both sides (taker/maker
+  fee + bid-ask half-spread per leg, the no-cross-margin 2N financing cost), with
+  REAL cited base-tier fee schedules verified June 2026: Kraken Pro spot 26/16 bps
+  + Kraken Futures perp 5/2 (tradeable), Hyperliquid perp 4.5/1.5 (tradeable), and
+  Binance/OKX as non-tradeable reference points. Spreads are provisional
+  conservative assumptions (`spread_basis="assumed"` -> `provisional=True`); the
+  measured-spread follow-up replaces them. Kraken round-trip = 69.0 bps exactly.
+- `carry.py`: `funding_window_indices` / `valid_entry_range` (the single source of
+  truth for the window and the entry bound), the `TradePnL` record, `simulate_trade`
+  (scalar), `per_interval_pnl` (the conservation harness), `simulate_batch` (the
+  polars-vectorised batch), and `price_pnl_contamination` (the ADR A3 guard).
+
+26 new offline tests + 3 live `network` tests. The three `kill_gate`-marked tests
+pin the invariants whose failure would void the gate: the funding-sign economic
+fixture (through the real Decimal boundary), the funding-window index identity vs
+`make_label_horizons`' `dt.shift(-H)`, and the per-trade P&L conservation. Toolchain
+green: 83 offline + 8 network pass, mypy --strict 23 files, ruff clean, em-dash clean.
+
+ADR 0003 amended (A1 to A3) and the per-trade math (findings 1, 4, 5, 6) implemented.
+
+#### Design review findings and resolutions (senior-quant design review: APPROVE-WITH-CHANGES, 2 Critical + 4 High)
+
+The review grounded itself in the actual `clock.py` / `records.py` / `sharpe.py`
+code and CONFIRMED the load-bearing math (the funding sign, the `range(i+1, i+H+1)`
+window, its identity with `dt.shift(-H)`, the round-trip "two full spreads"
+algebra, the batch `c[i+H]-c[i]` formula). Resolved before implementing:
+
+- **C1 [fixed]:** the `entry+H < height` boundary was stated two ways (scalar guard
+  vs batch slice), so a future off-by-one could let one path book a truncated-window
+  trade the other rejects. Resolution: one definition (`funding_window_indices` /
+  `valid_entry_range`); the scalar guard asserts `window.stop <= height` and the
+  batch slices `range(0, height-H)` from it; a `kill_gate` test pins the row count
+  and the `entry=height-H` raise.
+- **C2 [fixed, ADR A1]:** the ADR financing FORMULA omitted the factor of 2 the
+  prose ("2N capital tied up") requires. Resolution: keep `capital_multiple=2.0`
+  (the conservative, economically correct no-cross-margin charge; the additive drag
+  genuinely lowers the DSR, it is not Sharpe-neutral), amend ADR line 65, pin the 2x
+  with a test.
+- **H3 [fixed, ADR A2]:** financing used the nominal `H*interval`, which understates
+  the drag on the irregular early history the baseline leans on. Resolution: use the
+  real wall-clock hold `dt[i+H]-dt[i]` (both paths; pinned by a 16h-gap test).
+- **H4 [fixed]:** the batch-vs-scalar funding parity must be `abs(...) < 1e-12`, not
+  `==`, because the rolling-sum vs left-to-right sum cancel differently on a long
+  mostly-positive funding series. Resolution: `BATCH_SCALAR_ATOL = 1e-12`, documented;
+  the batch funding uses `rolling_sum(H).shift(-H)` (sums exactly H terms, minimal
+  cancellation).
+- **H5 [fixed, ADR A3]:** `funding_collected` is a separate field; the early-gate
+  break-even reads `median(funding_collected)`, NOT `median(gross)` (so the signed
+  basis-convergence proxy cannot pad the cost hurdle); the contamination guard
+  reports the SIGNED `mean(price_pnl)` (the bias is one-sided short gamma), not only
+  `median|price_pnl|`.
+- **H6 [fixed]:** `entry_taker`/`exit_taker` split + per-leg (spot/perp) half-spreads
+  so the cost surface can model the realistic maker-in / taker-out without forcing a
+  single style.
+- Mediums/Lows folded in: the `provisional` flag + required `source` citation; the
+  `per_interval_pnl` scoped as a conservation harness (not the PR4b per-period
+  series); explicit float narrowing for mypy --strict; the exact-add field algebra
+  invariants; the sign test consuming the real boundary path.
+
+#### Post-implementation review findings and resolutions (senior-quant post-impl review: FIX-THEN-SHIP, 1 High)
+
+The reviewer traced the index math and conservation on a running interpreter and
+verified the math is correct by execution (not by reading comments). Resolved:
+
+- **H1 [fixed]:** `simulate_batch` dropped a trade on an interior null FUNDING rate
+  (it only checked null prices) while the scalar path raised, breaking the C1
+  same-input/same-result guarantee (a funding gap would silently shrink the trade
+  count when PR4b takes `median`/`mean`, which skip nulls). Resolution: the batch
+  null guard now also rejects a null `funding_collected` within the valid range,
+  with a regression test.
+- **Determinism defect found while fixing H1 [fixed]:** the batch `hold_hours` used
+  polars `.dt.total_seconds()` (integer-second truncation) while the scalar used
+  Python `.total_seconds()` (microseconds), so on the real frame's sub-second
+  settlement jitter the two financing terms disagreed by ~2.5e-9 (a real batch/scalar
+  divergence, caught by the new real-data parity spot-check). Resolution: both paths
+  now compute the hold from integer microseconds, numerically identical.
+- **M2 [fixed]:** the contamination threshold was `< 1.0` (would wave through a proxy
+  half the size of the funding). Resolution: `PRICE_PNL_CONTAMINATION_LIMIT = 0.25`,
+  tied to ADR A3's "non-trivial fraction" (the realized post-ETF ratio is 5 to 7%).
+- **L3 [fixed]:** the A3 signed-mean guard lived only in a network-gated test.
+  Resolution: extracted `price_pnl_contamination` and added an offline unit test of
+  the guard logic (clean / contaminated / degenerate frames).
+- **L4 [fixed]:** the `BATCH_SCALAR_ATOL` justification was narrated, not pinned on
+  the real frame. Resolution: the network test now spot-checks batch-vs-scalar parity
+  on the live BTCUSDT frame at the tolerance.
+
+#### Verification (against real data, not just fixtures)
+
+The live Binance Vision pull builds the held-out post-ETF BTCUSDT frame
+(2024-06..09) and runs the vectorised batch under the Kraken cost model. GROSS
+median funding rises with the hold (0.75 bps at H=1, to 15.3 bps at H=21) while the
+round-trip cost is a fixed ~69 bps, so the naive always-on taker carry does not
+clear the cost at any tested horizon (the early-gate kill previews cleanly; PR4b
+produces the deflated number). The signed `mean(price_pnl)` is 5 to 7% of mean
+funding (the static-notional proxy is not contaminating the carry mean), though at
+H=1 the per-trade `median|price_pnl|` (9.5 bps) is comparable to the funding itself
+(an honest per-trade-variance caveat at short holds). Batch-vs-scalar parity holds
+on the real frame at 1e-12.
+
 ## 2026-06-03, session 2: GitHub + data layer (PR1+PR2+PR3) + cost-model design
 
 ### Cost model + random-entry null: design locked (ADR 0003)

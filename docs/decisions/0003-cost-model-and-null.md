@@ -167,10 +167,58 @@ The kill decision reads the LESS favourable of (amortised vs lumpy cost) and
   means the net number and the deflated-Sharpe validation describe different
   trades, voiding the kill gate.
 
+## PR4a amendment (the design review of the per-trade math)
+
+The PR4a design review, grounding itself in the actual `clock.py` /
+`records.py` / `sharpe.py` code, confirmed the load-bearing math (the funding
+sign, the `range(i+1, i+H+1)` window, its identity with `make_label_horizons`
+`dt.shift(-H)`, the round-trip "two full spreads" algebra) and corrected three
+points that this amendment locks. They are corrections to the prose above, and
+the implementation follows the amendment where the two differ.
+
+- **A1 (financing carries the 2N capital base).** The formula at the top of this
+  ADR wrote `financing_cost = funding_capital_rate * (H * interval_hours / 8760)`,
+  which omits the factor of 2 the surrounding prose ("the book ties up 2N of
+  capital") requires. The correct, conservative term is
+  `financing_cost = funding_capital_rate * capital_multiple * (hold_hours / 8760)`
+  with `capital_multiple = 2.0` (no spot/perp cross-margin, so both legs are
+  funded). Because the financing drag is an ADDITIVE per-period shift, not a
+  multiplicative scaling, doubling it genuinely lowers the Deflated Sharpe (the
+  Sharpe is scale-invariant only under a uniform rescale of every term, which an
+  additive drag is not), and it directly raises the cost the early gate must
+  clear. The 2N is the less favourable and economically correct choice, so the
+  kill reads it. `capital_multiple` is configurable; setting it below 2 requires
+  stating the bias.
+
+- **A2 (financing uses the real wall-clock hold, not the nominal interval).** The
+  capital is tied up from entry just after `dt[i]` to exit at `dt[i+H]`, so the
+  hold is `hold_hours = (dt[i+H] - dt[i]) / 1h`, read from the same two timestamps
+  the price legs use, NOT `H * interval_hours`. The clock layer deliberately
+  tolerates irregular early history (the stamped `funding_interval_hours` is a
+  nominal; observed gaps vary), so the nominal would understate the drag on a
+  gap-straddling hold, a favourable bias on exactly the pre-ETF rows the baseline
+  leans on. The wall-clock hold is conservative and internally consistent.
+
+- **A3 (the early-gate break-even reads funding, not gross).** The early economic
+  gate is "does the median FUNDING collected over the hold exceed the round-trip
+  cost," so `break_even_cost = median(funding_collected_per_trade)`, NOT
+  `median(gross_per_trade)`. Folding the static-notional `price_pnl` proxy into
+  the cost hurdle would let a noisy, signed basis-convergence term pad the carry
+  and understate the cost the funding alone must beat. `gross = funding_collected
+  + price_pnl` remains the basis for the DSR net-of-cost series; the early gate
+  and the DSR read different fields of the same `TradePnL`, by design. The
+  static-notional contamination guard therefore reports the SIGNED
+  `mean(price_pnl)` (and its sign-regime conditional), not only `median|price_pnl|`:
+  a positive mean that is a non-trivial fraction of `mean(funding_collected)`
+  flags the kill number contaminated, because the proxy's bias is one-sided
+  (short gamma on the basis), not just noisy.
+
 ## Status
 
-Accepted. PR4a implements the per-trade math with findings 1, 4, 5, 6 (the sign
-fixture, the static-notional bound, the index-identity invariant, the financing
-term). PR4b implements findings 2, 3, 7, 8, 9, 10, 11 (lumpy cost, embargo>=H,
-conservative/measured spread, pre-tax PSR(0) headline, non-overlapping T, the
-control trial family, the sign-regime bucket) and produces the first kill number.
+Accepted. PR4a implements the per-trade math with findings 1, 4, 5, 6 and
+amendments A1 to A3 (the sign fixture, the static-notional signed bound, the
+index-identity invariant, the wall-clock financing term on the 2N base, the
+single-source-of-truth funding window). PR4b implements findings 2, 3, 7, 8, 9,
+10, 11 (lumpy cost, embargo>=H, conservative/measured spread, pre-tax PSR(0)
+headline, non-overlapping T, the control trial family, the sign-regime bucket)
+and produces the first kill number.
