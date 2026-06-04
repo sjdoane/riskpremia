@@ -25,9 +25,10 @@ import attrs
 
 from riskpremia.data.errors import VenueFetchError
 
-Venue = Literal["binance_vision", "okx", "hyperliquid"]
+Venue = Literal["binance_vision", "okx", "hyperliquid", "deribit"]
 """The data-source venues. A `Literal` (not an `Enum`) so it round-trips to
-TOML/JSON cleanly and stays grep-able."""
+TOML/JSON cleanly and stays grep-able. `deribit` is the implied-vol-index source
+(DVOL) for the variance-risk-premium study (ADR 0004)."""
 
 
 def derive_canonical(symbol: str) -> str:
@@ -132,4 +133,28 @@ class SpotPriceRecord:
     spot_symbol: str
     quote: str
     period_end_ts: datetime
+    close: Decimal
+
+
+DvolCurrency = Literal["BTC", "ETH"]
+"""The currencies Deribit publishes a DVOL implied-vol index for."""
+
+
+@attrs.frozen(slots=True)
+class DvolRecord:
+    """One day of the Deribit DVOL implied-volatility index (ADR 0004).
+
+    `close` is the daily DVOL value in ANNUALIZED VOLATILITY PERCENTAGE POINTS
+    (e.g. 34.44 means a 34.44% annualized implied vol, annualized on a 365-day
+    basis, model-free / variance-swap methodology). The OHLC is carried for
+    completeness; the measurement uses the close. The series is LIVE / as-of (not
+    immutable like the Binance Vision dumps), so reproducibility rests on a
+    SHA256-stamped snapshot, not on the API being stable.
+    """
+
+    currency: DvolCurrency
+    ts: datetime
+    open: Decimal
+    high: Decimal
+    low: Decimal
     close: Decimal

@@ -3,6 +3,82 @@
 What shipped, plus every review finding and its resolution (rule 2). Newest
 first. This is the audit trail; STATUS.md is the current-state snapshot.
 
+## 2026-06-04, session 4: the VRP pivot (ADR 0004) + the measurement floor (PR5a)
+
+### The pivot: crypto variance risk premium (ADR 0004, merged)
+
+The naive funding carry came back a clean net-of-cost null, so per the
+pivot-on-failure rule the next strategy was chosen by reading the research,
+surveying GitHub, and running a four-lens review (realist / quant / builder /
+growth) plus an adversarial cross-check over a researched shortlist, gated by a
+verified data-access spike. Decision (ADR 0004): pivot to a reproducible crypto VRP
+study in two explicitly separated layers, a fully-reproducible index-level
+measurement (Deribit DVOL minus realized variance) and a cost-gated short-variance
+tradeable test (pre-registered as a likely cost/peso-bounded null). VRP won on
+additivity (a third orthogonal premium-type), magnitude (the one crypto premium
+large enough to make the kill gate a genuine both-ways test), and reproducibility
+(it recovers the equity-VRP / vol-desk route deprioritized in ADR 0001, on free
+data). The spike confirmed Deribit DVOL (free, keyless, US-reachable, daily from
+2021-04) and the Tardis first-of-month free chains. Git note: a stacked-PR base did
+not auto-retarget when its base merged, so PR4b first landed on the PR4a branch and
+was re-landed on `main` via a corrective PR; future PRs base on `main`.
+
+### VRP measurement floor (PR5a) on `feat/vrp-dvol-and-measurement`
+
+Layer i, the reproducible measurement. Shipped:
+- `data/sources/deribit_dvol.py`: a stdlib DVOL source (mirrors `okx.py`, injectable
+  `http_get`); the range is fetched in deterministic sub-windows under the API's
+  ~1000-point cap (a too-wide request silently drops the early tail).
+- `data/boundary.py` `PydanticDeribitDvolRow` (validates the `[ts,o,h,l,c]` array),
+  `data/records.py` `DvolRecord` + the `deribit` `Venue`, `data/clock.py`
+  `CRYPTO_ANNUALIZATION_DAYS = 365`.
+- `vrp/realized.py`: the matched-horizon realized variance `(365/W) * sum(log-return^2)`
+  over a COMPLETE calendar window (the variance-swap convention matching DVOL;
+  incomplete windows null; a calendar gap raises, never interpolates).
+- `vrp/measurement.py`: `build_vrp_frame` (implied `(DVOL/100)^2` minus realized;
+  forward = the ex-post measurement, trailing = the tradeable proxy; the spot-ETF
+  regime split) and `vrp_headline` (the NON-OVERLAPPING strided forward series across
+  all phases, with a block-bootstrap CI + the Politis-White block-deflated effective
+  T, reusing the vendored stack).
+
+**The first measured VRP** (live Deribit DVOL + Binance Vision spot, BTC,
+2022-01..2025-06, 30-day): mean variance premium **0.0873** (phase band
+[0.055, 0.109]), **95% bootstrap CI [0.033, 0.119] clearing zero** (overlap-honest,
+effective T 13 from 42 strided), 70% of days positive, and a pre-ETF 0.101 ->
+post-ETF 0.059 compression paralleling the funding-carry decay. The VRP is a real,
+positive, statistically-significant premium; whether it survives option-selling
+costs + the peso tail is Layer ii. 108 offline + 3 new network tests; mypy --strict
+31 files, ruff, em-dash clean.
+
+#### Design review (APPROVE-WITH-CHANGES, 3 Critical + 5 High, all resolved before implementing)
+
+- **C1:** realized variance is the matched-horizon `(365/W)*sum(r^2)` on COMPLETE
+  windows, not `mean(r^2)*365` (which drifts with the observation count on a gappy
+  window).
+- **C2:** the realized leg is the zero-mean sum of squared LOG returns (the
+  variance-swap convention matching DVOL), verified against Deribit's published
+  365-annualized model-free methodology.
+- **C3:** the headline is the NON-OVERLAPPING strided forward-VRP series with a phase
+  band + a block-deflated effective T (mirroring the carry `scoring.py`), not a
+  dishonest t-stat on the 29/30-overlapping daily series.
+- **H4** (forward t+1..t+W / trailing t-W+1..t no-look-ahead, the re-anchor identity),
+  **H6** (one 365 constant on both legs; verified DVOL is 365-annualized), **H7**
+  (gap-free calendar, raise not interpolate), **H8** (DVOL documented as
+  live/as-of/mutable; the `deribit` Venue literal). **H5** (the Deribit-index vs
+  Binance-spot basis) is caveated at the point of computation.
+
+#### Post-implementation review (SHIP, 0 Critical/High)
+
+The reviewer traced the estimator, the non-overlapping headline, the chunking fetch,
+and the look-ahead identity in running code and confirmed every convention correct.
+Five Medium/Low: **[M1, tracked]** the DVOL SHA256 manifest stamp + a committed CSV
+fixture are DEFERRED to the committed-artifact PR (acceptable for PR5a because the
+network test re-fetches and the as-of nature is documented, but it GATES the artifact
+PR before the number is quoted as a reproducible headline); **[fixed]** the
+`vol_spread` same-row filter + the `pw` display precision; **[noted]** the
+phase-0-CI-vs-median-phase-mean seam is disclosed in the docstring, and a build-frame
+alignment diagnostic is a tracked nit.
+
 ## 2026-06-03, session 3: the kill gate (PR4a per-trade math + PR4b the first kill number)
 
 ### The null + the first net-of-cost kill number (PR4b) on `feat/cost-model-pr4b-null-gate`

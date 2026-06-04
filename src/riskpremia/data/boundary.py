@@ -20,7 +20,8 @@ from decimal import Decimal
 from pydantic import BaseModel, ConfigDict
 
 from riskpremia.data.clock import ms_to_utc
-from riskpremia.data.records import FundingRecord, InstrumentId
+from riskpremia.data.errors import VenueFetchError
+from riskpremia.data.records import DvolCurrency, DvolRecord, FundingRecord, InstrumentId
 
 
 class BinanceFundingRow(BaseModel):
@@ -110,4 +111,64 @@ class PydanticOKXFundingRow(BaseModel):
             funding_interval_hours=interval_hours,
             realized=True,
             premium=None,
+        )
+
+
+class PydanticDeribitDvolRow(BaseModel):
+    """One row of Deribit `public/get_volatility_index_data` (the DVOL index).
+
+    The endpoint returns each day as a 5-element ARRAY `[ts_ms, open, high, low,
+    close]`, not a dict, so `from_array` does the shape check (loud
+    `VenueFetchError`) and the float-to-Decimal conversion via `str` (avoiding
+    float-repr noise) before this model validates the typed fields. `extra="forbid"`
+    is moot for the kwargs path but states the intent. The DVOL values are
+    annualized vol percentage points.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="forbid")
+
+    timestamp_ms: int
+    open: Decimal
+    high: Decimal
+    low: Decimal
+    close: Decimal
+
+    @classmethod
+    def from_array(cls, row: object) -> PydanticDeribitDvolRow:
+        """Build from the raw `[ts_ms, open, high, low, close]` array, loud on shape."""
+        if not isinstance(row, list | tuple) or len(row) != 5:
+            raise VenueFetchError(
+                f"Deribit DVOL row must be a 5-element [ts,o,h,l,c] array; got {row!r}"
+            )
+        ts, o, h, lo, c = row
+        return cls(
+            timestamp_ms=int(ts),
+            open=Decimal(str(o)),
+            high=Decimal(str(h)),
+            low=Decimal(str(lo)),
+            close=Decimal(str(c)),
+        )
+
+    def to_record(self, currency: DvolCurrency) -> DvolRecord:
+        """Convert to a DvolRecord, raising on a non-positive or inconsistent OHLC."""
+        for name, value in (
+            ("open", self.open),
+            ("high", self.high),
+            ("low", self.low),
+            ("close", self.close),
+        ):
+            if value <= 0:
+                raise VenueFetchError(f"Deribit DVOL {name} must be positive; got {value}")
+        if not (self.low <= self.open <= self.high and self.low <= self.close <= self.high):
+            raise VenueFetchError(
+                f"Deribit DVOL OHLC inconsistent: o={self.open} h={self.high} "
+                f"l={self.low} c={self.close}"
+            )
+        return DvolRecord(
+            currency=currency,
+            ts=ms_to_utc(self.timestamp_ms),
+            open=self.open,
+            high=self.high,
+            low=self.low,
+            close=self.close,
         )
