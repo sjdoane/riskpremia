@@ -36,14 +36,6 @@ dev = [
     "mypy==1.13.0",
     "ruff==0.7.4",
 ]
-# Exchange / market-data fetching. httpx is data-ingest-only: the on-disk
-# raw snapshot SHA256 is what determinism gates on, not the in-memory HTTP
-# path, so the pin is exact-but-not-determinism-critical. The Binance Vision
-# historical dumps are fetched and unzipped with the stdlib (urllib/zipfile),
-# so the long-history reproducible path has zero third-party surface.
-dataops = [
-    "httpx==0.27.2",
-]
 figures = [
     # matplotlib is render-only: it produces the committed figures from the
     # study artifact and is NEVER imported by the cost model or the backtest

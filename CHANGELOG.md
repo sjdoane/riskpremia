@@ -3,7 +3,59 @@
 What shipped, plus every review finding and its resolution (rule 2). Newest
 first. This is the audit trail; STATUS.md is the current-state snapshot.
 
-## 2026-06-03, session 2: GitHub + data-layer PR1 + PR2
+## 2026-06-03, session 2: GitHub + data-layer PR1 + PR2 + PR3
+
+### Data-layer PR3 (OKX live source + Binance-vs-OKX funding delta) + ADR 0002 amendment
+
+Completes the cut-to-ship data layer. Shipped on `feat/data-layer-pr3-okx`:
+
+- `data/sources/okx.py`: a stdlib OKX source (paginates `funding-rate-history`
+  backward via `after=`), the US-reachable kill-gate venue. PIT realized gate
+  (`PydanticOKXFundingRow.to_record`): accept a row only when `realizedRate` is
+  present, `method == "current_period"`, and the settlement instant is strictly
+  before now; use `realizedRate` (the paid rate), never the predicted
+  `fundingRate`, and never read the predicted `/funding-rate` endpoint.
+- `data/cross_venue.py`: the Binance-vs-OKX funding delta on the matched
+  settlement grid (the venue-basis measurement, design finding 5).
+- **Two empirical findings** (verified live): OKX public funding history is
+  RECENT-ONLY (~93 days), so it is the live/recent kill-gate venue and the delta
+  is measured on the recent overlap as an adjustment, not over 2024-2026; and
+  Binance Vision `calc_time` carries a few MS of jitter around the settlement
+  instant while OKX is clean, so the delta snaps both `dt` to the funding grid
+  (`dt.dt.round`) before joining (a naive timestamp join lost ~half the events).
+- **httpx removed**: with OKX on the stdlib too, the whole data layer fetches with
+  `urllib` + `json` (zero third-party fetch surface); the `dataops` extra is gone
+  and CI installs `.[dev]`. OKX 403s the default `Python-urllib` User-Agent, so a
+  descriptive UA is sent.
+- ADR 0002 amended (decisions 9 to 13). 9 OKX/delta offline tests + 3 live
+  `network` tests; live-verified (OKX recent funding + the small venue basis).
+
+#### Review findings and resolutions (post-implementation review: FIX-THEN-SHIP)
+
+The review confirmed the PIT gate (realized-only, paid `realizedRate`, predicted
+endpoint never touched) and the grid-snap are correct, with determinism intact.
+No Critical. Resolved:
+
+- **H1 [fixed]:** removing the `dataops` extra left the README Setup command
+  installing `.[dev,dataops]`, which now errors. Fixed the README to `.[dev]` and
+  reconciled the stale CHANGELOG reference.
+- **M2 [fixed]:** `OKXSource` did not implement the `FundingSource` Protocol's
+  `available_months`. Added it, deriving the months from the recent retention
+  window (OKX has no listing API), with a test.
+- **M3 [fixed]:** added a non-progress guard to the backward-pagination loops
+  (`if oldest >= after: break`) so a hypothetical boundary-inclusive page cannot
+  cause a re-fetch loop or duplicates.
+- **M4 [fixed]:** the grid-snap now fails loudly (`VenueFetchError`) if snapping
+  collapses two real events to one point (an irregular sub-grid series the overlap
+  measurement is not valid on), with a test; the 8h/8h case is provably
+  collision-free.
+- **L5 [fixed]:** `retention_floor` now parses through the pydantic boundary
+  rather than reading the raw JSON key, honoring the loud-failure contract.
+- **L6 [noted]:** `_MAX_PAGES` is a backstop that cannot bind today (~5.5 years vs
+  OKX's ~93-day retention); a signal-on-exhaustion is a later refinement.
+
+Toolchain: ruff clean, mypy --strict clean (20 files), 57 offline + 5 network
+tests pass, em-dash clean.
 
 ### Data-layer PR2 (Binance Vision source) + ADR 0002
 
@@ -124,7 +176,7 @@ a senior-quant **post-implementation review (FIX-THEN-SHIP)**:
 
 - **Project scaffold.** Clean dedicated venv `C:\Users\SamJD\.venvs\riskpremia`
   (Python 3.12.13). Pinned `pyproject.toml` (polars 1.41.1, numpy 1.26.4,
-  pydantic 2.9.2, attrs 24.2.0; dataops extra httpx 0.27.2; dev pytest 8.3.3 /
+  pydantic 2.9.2, attrs 24.2.0; dataops extra httpx 0.27.2 (REMOVED in PR3); dev pytest 8.3.3 /
   mypy 1.13.0 / ruff 0.7.4 / pytest-cov 5.0.0 / pytest-env 1.1.5), mypy --strict
   config, ruff config, pytest config (PYTHONHASHSEED=0, warnings-as-errors).
   `.gitignore`, MIT `LICENSE`, `data/snapshots/manifest.toml` stub. Installed

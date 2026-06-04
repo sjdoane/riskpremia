@@ -4,20 +4,21 @@ Single source of truth for where Project RiskPremia is and what is deferred.
 Read this first on any new session. Update after every meaningful work block
 (rule 2).
 
-Last updated: 2026-06-03 (session 2, data-layer PR2).
+Last updated: 2026-06-03 (session 2, data-layer PR3).
 
 ## One-line state
 
 Lead track LOCKED: **Track B (crypto perpetual-futures funding carry,
 delta-neutral), framed as a measurement study.** Repo on GitHub
-(https://github.com/sjdoane/riskpremia); PR1 (typed core) MERGED. GitHub presents
-as solo work (no AI attribution; see the no-AI-attribution memory). Data-layer
-**PR2 (Binance Vision source) implemented and green** (ruff, mypy --strict 18
-files, 45 offline + 2 live network tests, em-dash clean) on branch
-`feat/data-layer-pr2-binance-vision`; ADR 0002 written; post-implementation review
-DONE (SHIP, no Critical/High; 3 Low findings folded in, 2 deferred). The live S3
-end-to-end pull is verified (funding + mark + spot + basis). Ready to open the PR.
-No strategy logic yet (correct: cost model + random-entry null first).
+(https://github.com/sjdoane/riskpremia); PR1 + PR2 MERGED. GitHub presents as solo
+work (no AI attribution; see the no-AI-attribution memory). Data-layer **PR3 (OKX
+live source + Binance-vs-OKX funding delta) implemented and green** (ruff, mypy
+--strict 20 files, 55 offline + 5 live network tests, em-dash clean) on branch
+`feat/data-layer-pr3-okx`; ADR 0002 amended; post-implementation review in
+progress. Live-verified: OKX recent-only funding + the venue-basis delta (small,
+under 0.1%/8h). httpx removed (data layer is now stdlib-only fetch). This
+COMPLETES the cut-to-ship data layer. NEXT IS THE COST MODEL (ADR 0003) + a
+random-entry null = the first economic kill gate. No strategy logic yet.
 
 GOTCHA (Windows, load-bearing): polars needs the `tzdata` package to resolve the
 "UTC" tz string when materializing tz-aware datetimes (pinned `tzdata==2026.2` in
@@ -83,18 +84,17 @@ caught a factual error in the OKX gate, plus 4 more Critical/High findings, all
 resolved in that doc). Scope was cut per rule 6 so the cost model is not blocked.
 
 1. ~~Data-layer PR1 (typed core + CPCV contract test).~~ DONE, reviewed, MERGED.
-2. ~~Data-layer PR2: `binance_vision.py` (BTCUSDT funding + matched MARK + spot)
-   + a live `network` checksum-verify test; ADR 0002.~~ Implemented + green +
-   live-verified; post-implementation review in progress; opening the PR next.
-   Carry-overs honored: pre-committed BTC/ETH survivor universe, matched-mark-vs-
-   spot basis, price-frame dedup at the source (PR1 review L4). Still deferred to
-   a later PR: the clamp-incidence diagnostic + the `scripts/fetch_funding.py`
-   manifest-stamping entry point + the committed derived artifact.
-3. **Data-layer PR3:** `okx.py` realized-history single fetch + the Binance-vs-OKX
-   funding delta join (for the kill-gate venue).
+2. ~~Data-layer PR2: `binance_vision.py` (BTCUSDT funding + matched MARK + spot).~~
+   DONE, reviewed (SHIP), MERGED.
+3. ~~Data-layer PR3: `okx.py` realized-history fetch + the Binance-vs-OKX funding
+   delta (kill-gate venue).~~ Implemented + green + live-verified; post-impl review
+   in progress; opening the PR next. This COMPLETES the cut-to-ship data layer.
 4. **Cost model (ADR 0003), parameterised to a US-tradeable venue** (taker/maker
    fees + both-leg spread + funding + short-term tax), then run a RANDOM-ENTRY
    NULL through it before any signal. This is also the early economic kill gate.
+   OPEN INPUT: which US-tradeable venue (Kraken / Coinbase / CME micro /
+   Hyperliquid); will default to a retail-accessible one and can model a couple.
+   Spread/depth data is free + reproducible via Binance Vision bookTicker/bookDepth.
 5. Only then: the carry signal + the risk-OFF regime circuit breaker; event-time
    CPCV glue; capacity curve; break-even-cost exhibit; regime decomposition;
    committed artifact + figures.

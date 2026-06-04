@@ -65,3 +65,49 @@ BINANCE_FUNDING_HEADER: tuple[str, ...] = (
 """The exact, verified Binance Vision funding CSV header. A parser asserts the
 incoming header equals this tuple and raises `VenueFetchError` otherwise, so a
 silent schema drift cannot be parsed as if it were the known shape."""
+
+
+class PydanticOKXFundingRow(BaseModel):
+    """One row of OKX /api/v5/public/funding-rate-history.
+
+    extra="ignore" (NOT "forbid"): the live OKX JSON carries venue fields
+    (instType, instId, formulaType, ...) this model does not need, and a benign
+    additive vendor change must not crash the live tier (design review finding
+    12). The leak-prevention discipline is structural: this is the SETTLED-history
+    endpoint, the source never reads the predicted /funding-rate (current)
+    endpoint, and to_record uses realizedRate (the paid rate), never the
+    fundingRate (predicted) field.
+    """
+
+    model_config = ConfigDict(frozen=True, extra="ignore")
+
+    fundingTime: int
+    realizedRate: Decimal | None = None
+    fundingRate: Decimal | None = None
+    method: str | None = None
+
+    def to_record(
+        self, instrument: InstrumentId, now_ms: int, interval_hours: int
+    ) -> FundingRecord | None:
+        """Convert a settled funding row to a record, or None if not realized.
+
+        PIT realized gate (design review finding 1): require realizedRate present,
+        method "current_period" (the settled marker observed on every history
+        row), and the settlement instant strictly before now. Uses realizedRate as
+        the funding_rate (the clamped composite cash flow); premium=None (the
+        history endpoint exposes no separate premium component).
+        """
+        if (
+            self.realizedRate is None
+            or self.method != "current_period"
+            or self.fundingTime >= now_ms
+        ):
+            return None
+        return FundingRecord(
+            instrument=instrument,
+            funding_ts=ms_to_utc(self.fundingTime),
+            funding_rate=self.realizedRate,
+            funding_interval_hours=interval_hours,
+            realized=True,
+            premium=None,
+        )
