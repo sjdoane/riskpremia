@@ -1,123 +1,167 @@
 # STATUS
 
 Single source of truth for where Project RiskPremia is and what is deferred.
-Read this first on any new session. Update after every meaningful work block
-(rule 2).
+Read this FIRST on any new session, then the ADRs it points to. Update after
+every meaningful work block (rule 2).
 
-Last updated: 2026-06-03 (session 2, cost-model design locked).
+Last updated: 2026-06-03 (session 2: data layer complete, kill-gate design locked).
 
 ## One-line state
 
-Lead track LOCKED: **Track B (crypto perpetual-futures funding carry,
-delta-neutral), framed as a measurement study.** Repo on GitHub
-(https://github.com/sjdoane/riskpremia); PR1 + PR2 + PR3 MERGED, so the
-**reproducible multi-venue data layer is COMPLETE**. GitHub presents as solo work
-(no AI attribution). The **cost model + random-entry null (the kill gate) is
-DESIGNED and deeply reviewed** (ADR 0003): a senior-quant design review caught 3
-merge-blocking issues that would have biased the kill number optimistically (an
-unpinned funding sign, cost-amortisation inflating the Deflated Sharpe, and a
-CPCV embargo blind to the hold overlap), all resolved in ADR 0003. NEXT:
-implement PR4a (the per-trade P&L math) then PR4b (the null + the first
-net-of-cost kill number). No strategy logic yet.
+A reproducible, intellectually-honest MEASUREMENT study of the crypto
+perpetual-futures funding-carry risk premium. Lead track LOCKED: **Track B**
+(crypto funding carry, delta-neutral), ADR 0001. Repo:
+https://github.com/sjdoane/riskpremia. **The reproducible multi-venue data layer is COMPLETE** (PR1+PR2+PR3
+merged). **The cost model + random-entry null (the kill gate) is DESIGNED and
+deeply reviewed: ADR 0003.** NEXT: implement PR4a (the per-trade P&L math) then
+PR4b (the null + the first net-of-cost kill number). No strategy logic yet (by
+design: the cost model + null come before any signal, rule 6).
 
-GOTCHA (Windows, load-bearing): polars needs the `tzdata` package to resolve the
-"UTC" tz string when materializing tz-aware datetimes (pinned `tzdata==2026.2` in
-core deps); without it `to_list()` panics with ZoneInfoNotFoundError.
+## Dev commands (Windows PowerShell; the venv is run DIRECTLY)
 
-## Lead-track decision (locked in ADR 0001)
+```
+$env:PYTHONIOENCODING="utf-8"
+$py = "C:\Users\SamJD\.venvs\riskpremia\Scripts\python.exe"
+& $py -m pytest -q                 # 62 pass (offline); never touch the off-limits pit-backtest venvs
+& $py -m pytest -q -m network      # live-exchange tests (OKX + Binance Vision), skipped in CI
+& $py -m mypy                       # strict, 20 src files
+& $py -m ruff check src tests
+```
+Setup if the venv is gone: `uv venv --python 3.12 C:\Users\SamJD\.venvs\riskpremia`
+then `uv pip install --python $py -e ".[dev]"`.
 
-- **Track B is the lead.** Reason: no WRDS/OptionMetrics setup exists on the
-  machine and the entitlement is not confirmable without the user's WRDS login; even if entitled,
-  OptionMetrics raw data is non-redistributable, which breaks the reproducibility
-  brand. Crypto funding data is free and empirically reproducible from a US IP.
-- A unanimous four-lens review (realist, quant, builder, growth, all high confidence) and an endorse-with-caveats adversarial cross-check backed Track B. Full record
-  in `docs/decisions/0001-lead-track-selection.md`.
-- **Career-target fork RESOLVED (2026-06-03):** asked, and the user deferred to
-  the project lead's judgment ("make the decision"). Track B is LOCKED. Framing default:
-  broad / systematic / reproducibility-first (the Track-B-optimal audience). No
-  WRDS/OptionMetrics chase; Track A stays the "also examined" contrast section.
+## What is built (data layer, complete)
 
-## Spike findings (2026-06-03, US IP)
+`src/riskpremia/`:
+- `analytics/` + `validation/`: VENDORED (copied + attributed) from pit-backtest
+  `edad904`, stdlib-faithful: `sharpe.py` (PSR/DSR/MinTRL), `bootstrap.py`
+  (stationary block bootstrap + Politis-White), `cv.py` (purged CPCV),
+  `trial_registry.py` (the DSR trial count). REUSE these verbatim; do not rewrite.
+- `data/`: `records.py` (attrs carriers + cross-venue canonicalization),
+  `boundary.py` (the ONLY pydantic module, AST-enforced), `clock.py` (the
+  funding-event clock: ms->UTC, realized-aware dedup, the backward as-of price
+  join, `make_label_horizons`, `marks_frame`/`spot_frame`), `manifest.py` (SHA256
+  reproducibility), `errors.py`, `cross_venue.py` (the Binance-vs-OKX funding
+  delta), `sources/binance_vision.py` (long-history backbone, checksummed),
+  `sources/okx.py` (live kill-gate venue).
+- `execution/` + `strategy/`: only docstrings so far (the kill gate goes here).
+- 62 tests (57 offline + 5 live `network`); mypy --strict / ruff / em-dash clean;
+  CI green (`.github/workflows/ci.yml`, installs `.[dev]`, runs ruff + mypy +
+  pytest, network tests skipped).
 
-- WRDS: zero setup (no env vars, no .pgpass, no `wrds` package, no breadcrumbs);
-  entitlement unconfirmable without the user's credentials; non-redistributable
-  even if entitled.
-- Crypto: OKX live funding + candles to 2020-09 (US-reachable, no key);
-  Hyperliquid on-chain (US-reachable, ~2023+); Binance Vision S3 dumps from
-  2020-01 (checksummed, reproducible, US-reachable). Live Binance/Bybit APIs are
-  geo-blocked from the US IP (honest venue-access friction -> risk register).
+The data layer yields, for a perp, an aligned **funding + perp-mark + spot +
+basis** series on the funding-event clock that feeds the vendored
+event-time-purged CPCV directly. Every input is checksum-reproducible (Binance
+Vision) or live-and-keyless (OKX). The whole layer fetches with the STDLIB ONLY.
 
-## Done this session
+## Current task: the kill gate (ADR 0003)
 
-- Clean dedicated venv at `C:\Users\SamJD\.venvs\riskpremia` (Python 3.12.13;
-  NOT the off-limits pit-backtest venvs). Pinned `pyproject.toml`
-  (polars 1.41.1 / numpy 1.26.4 / pydantic 2.9.2 / attrs 24.2.0; dataops:
-  httpx 0.27.2; dev: pytest/mypy/ruff). Versions verified installed.
-- Project structure: `src/riskpremia/{analytics,validation,data,execution,
-  strategy}`, `tests/{unit,integration}`, `docs/{decisions,methodology,research}`,
-  `scripts`, `artifacts`, `data/snapshots`.
-- Vendored (copied + attributed, from pit-backtest `edad904`) the asset-agnostic
-  stack: `analytics/sharpe.py` (PSR/DSR/MinTRL), `analytics/bootstrap.py`
-  (stationary block bootstrap + Politis-White), `validation/cv.py` (purged
-  CPCV), `validation/trial_registry.py` (DSR trial count). Fidelity pinned by
-  `tests/unit/test_vendored_stack.py` (8 tests, all green; DSR canonical 0.7657
-  matches the 0.766 acceptance pin).
-- ADR 0001 (lead-track selection) with the pre-registered kill criterion.
-- STATUS / CHANGELOG / memory note.
+The trade: delta-neutral funding carry (long spot N, short perp N, hold H funding
+intervals, collect funding, close). Build the cost model FIRST, run a
+random-entry NULL through it, produce the first net-of-cost number (rule 6). ADR
+0003 has the full locked design; the load-bearing decisions a reviewer caught
+(all resolved) and that the implementation MUST honor:
 
-## Pre-registered kill criterion (frozen UPFRONT, full text in ADR 0001)
+- **Funding sign (was a trap):** `funding_rate` positive = longs pay shorts; the
+  short book collects `+sum(funding_rate[i+1..i+H])`. Pin with an
+  economic-direction FIXTURE, never a comment.
+- **Cost is LUMPY, not amortised:** booking the round-trip cost per interval
+  shrinks the skew/kurtosis the DSR penalises and INFLATES it. Book it on the
+  interval incurred; report amortised-vs-lumpy; the **kill reads the LESS
+  favourable**.
+- **CPCV embargo >= H:** the overlapping holds leak unless the embargo covers the
+  H-event window. Force `embargo_count >= H`, assert before splitting.
+- **Financing/capital cost:** no cross-margin means 2N capital is tied up; charge
+  its opportunity cost over the hold.
+- **DSR headline is PRE-tax** (tax is a personal level-shift); after-tax is an
+  annual-aggregate sidebar with within-year loss offset.
+- **Non-overlapping return series** for the DSR `T` (overlapping holds
+  autocorrelate; raw `T` overstates significance).
+- The null is a separate **control** trial-family, so at this pre-signal
+  milestone the kill number is honestly `PSR(0)` at `n_effective=1`.
+- **Spread is conservative-or-MEASURED** (the stress-test's most-likely loss):
+  use a deliberately high half-spread + label provisional, OR measure the median
+  from the free Binance Vision `bookTicker` dataset. The kill reads the less
+  favourable so a soft spread cannot fake a pass.
+- **The kill_gate-marked invariant:** the funding window for entry `i` is exactly
+  `range(i+1, i+H+1)` AND identical to the `make_label_horizons` `dt.shift(-H)`
+  label (verified correct in review), with a P&L-conservation cross-check.
 
-The study ships regardless (an honest null is acceptable). The kill gate is about
-REAL-MONEY deployment:
-- Early economic gate: if median 8h funding collected on the US-tradeable venue
-  does not exceed amortised round-trip cost for a passive always-on carry in the
-  held-out post-ETF regime, the naive carry is dead after costs.
-- Primary kill gate: net-of-all-cost Deflated Sharpe < 0.95 out-of-sample, under
+PR4a = `execution/{errors,cost,carry}.py` + the per-trade math tests (the sign
+fixture, the index-identity kill_gate test, the financing term). PR4b =
+`strategy/null.py` + `execution/{scoring,exhibit}.py` + `scripts/run_null_gate.py`
++ the embargo>=H glue + the first kill number across venues. Model a few
+US-tradeable venues (Kraken Futures, Hyperliquid; Binance/OKX as non-tradeable
+reference) so the gate is a cost-sensitivity surface.
+
+## Pre-registered kill criterion (frozen UPFRONT; ADR 0001)
+
+The study ships regardless (an honest null is an acceptable, intended deliverable);
+the gate is about REAL-MONEY deployment.
+- Early gate: if median funding collected over the hold does not exceed the
+  amortised round-trip cost for a passive always-on carry on the US-tradeable
+  venue (held-out post-spot-ETF regime), the naive carry is dead after costs.
+- Primary gate: net-of-all-cost Deflated Sharpe < 0.95 out-of-sample, under
   event-time-purged CPCV with embargo, on the frozen trial count, on the held-out
-  post-ETF period -> declare non-viable for deployment and ship the honest null.
+  post-ETF period -> declare non-viable and write the honest null. Do not
+  soft-pedal a hit.
 
-## Next (in order)
+## Gotchas / load-bearing facts
 
-The data-layer milestone is PLANNED and design-reviewed (design locked in
-`docs/research/0001-data-layer-design.md`; the reviewer probed live data and
-caught a factual error in the OKX gate, plus 4 more Critical/High findings, all
-resolved in that doc). Scope was cut per rule 6 so the cost model is not blocked.
+- **Windows + polars:** needs the `tzdata` package (pinned `tzdata==2026.2`) to
+  resolve "UTC" when materializing tz-aware datetimes, else `to_list()` panics.
+- **OKX:** public funding history is RECENT-ONLY (~93 days), so it is the live
+  kill-gate venue, NOT a long-history source; the Binance-vs-OKX delta is measured
+  on the recent overlap and applied as an adjustment. OKX 403s the default
+  `Python-urllib` User-Agent (send a descriptive UA).
+- **Cross-venue alignment:** Binance Vision `calc_time` has a few ms of jitter
+  around the settlement instant while OKX is clean, so cross-venue joins MUST snap
+  `dt` to the funding grid (`dt.dt.round("8h")`); within-venue series keep the raw
+  jittered dt (fine for the 8h CPCV clock).
+- **ruff auto-strips unused imports:** it silently dropped MarkPriceRecord /
+  SpotPriceRecord from clock.py in PR1; re-add when a later change uses them.
+- **The data layer fetches with the STDLIB ONLY** (urllib + json + zipfile); httpx
+  was removed. Keep it that way (a reproducibility property).
 
-1. ~~Data-layer PR1 (typed core + CPCV contract test).~~ DONE, reviewed, MERGED.
-2. ~~Data-layer PR2: `binance_vision.py` (BTCUSDT funding + matched MARK + spot).~~
-   DONE, reviewed (SHIP), MERGED.
-3. ~~Data-layer PR3: `okx.py` realized-history fetch + the Binance-vs-OKX funding
-   delta (kill-gate venue).~~ Implemented + green + live-verified; post-impl review
-   in progress; opening the PR next. This COMPLETES the cut-to-ship data layer.
-4. **Cost model (ADR 0003), parameterised to a US-tradeable venue** (taker/maker
-   fees + both-leg spread + funding + short-term tax), then run a RANDOM-ENTRY
-   NULL through it before any signal. This is also the early economic kill gate.
-   OPEN INPUT: which US-tradeable venue (Kraken / Coinbase / CME micro /
-   Hyperliquid); will default to a retail-accessible one and can model a couple.
-   Spread/depth data is free + reproducible via Binance Vision bookTicker/bookDepth.
-5. Only then: the carry signal + the risk-OFF regime circuit breaker; event-time
-   CPCV glue; capacity curve; break-even-cost exhibit; regime decomposition;
-   committed artifact + figures.
+## Hard rules (non-negotiable; full text in README + the session_rules / feedback memories)
 
-Deferred from the data layer (not on the critical path to the first kill-gate
-number): Hyperliquid source, OKX retention-probe machinery, multi-coin universe,
-full S3 pagination generality.
+1. **Process:** every meaningful component goes Plan -> a senior-quant design
+   review -> implement -> a post-implementation review; address Critical + High
+   findings before marking done; convene a four-lens review + an adversarial
+   cross-check at a genuine fork. Record every finding + its resolution in the
+   CHANGELOG.
+2. Keep STATUS / CHANGELOG / memory / ADRs current after every block.
+3. **No em-dashes** (U+2014) or double-hyphen sequences anywhere; sweep before
+   every commit.
+4. **Kill-early** on the frozen criterion above; an honest null is a success.
+5. **Windows-first** PowerShell, absolute paths, no `&&` chaining, `$null`,
+   `$env:VAR`. The clean dedicated venv only; never the off-limits pit-backtest
+   venvs.
+6. **Verify against REAL data:** fixtures/mocks are necessary but not sufficient;
+   the backtest must be net of realistic modeled costs (cost model FIRST, then a
+   random-entry null). The live `network` tests are the real-data proof.
+7. No secrets in chat (`.env` / env vars; flag any paste as exposed).
+8. Determinism + reproducibility: exact-patch pins, seeded `random.Random` only,
+   sorted polars, committed regenerable artifacts. Reuse the vendored stack.
 
 ## Deferred / open
 
-- Career-target fork RESOLVED (user deferred to agent judgment; Track B locked).
-- A US-tradeable execution venue must be chosen for the cost model (candidates:
-  Kraken, Coinbase, CME micro futures, Hyperliquid). Decide in the cost-model
-  ADR with real fee schedules.
-- Binance Vision funding-history depth + instrument survivorship to be quantified
-  during the data-layer milestone.
-- CI (GitHub Actions: mypy --strict src + pytest) deferred until after the first
-  real milestone, mirroring pit-backtest.
+- Cost-model spread: replace the conservative assumption with the MEASURED median
+  from Binance Vision `bookTicker` (free, reproducible) as the follow-up after the
+  first gate.
+- Capacity curve (the order-book-walk impact + the size where net edge crosses
+  zero, the declared honest headline); the carry signal + the risk-OFF regime
+  circuit breaker; the committed artifact + figures (matplotlib `figures` extra).
+- Data-layer extras (not on the kill-gate path): Hyperliquid source, multi-coin
+  universe, `scripts/fetch_funding.py` + the committed derived artifact,
+  clamp-incidence diagnostic.
+- US-tradeable venue: model a few in the cost model unless Sam names one.
 
-## Hard rules (full text in README + the portfolio session_rules)
+## Reading map
 
-Independent reviews plus a multi-perspective panel on every meaningful chunk/fork; keep STATUS/CHANGELOG/
-memory/ADRs current; no em-dashes (sweep before commit); kill-early with the
-criterion above; Windows-first PowerShell + absolute paths; clean venv only;
-verify against REAL data, cost model first; no secrets in chat; pinned deps +
-reproducible artifacts.
+ADR 0001 (lead-track decision + the kill criterion), ADR 0002 (the data layer +
+funding clock, incl the PR3 OKX/delta amendment), ADR 0003 (the cost model + null,
+the locked methodology). `docs/research/0001-data-layer-design.md` (the reviewed
+data-layer design). CHANGELOG.md (every review finding + resolution). The
+`project_riskpremia` memory note (cross-session summary). README.md (the
+reviewer-facing front door).

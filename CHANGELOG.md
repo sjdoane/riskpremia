@@ -139,15 +139,6 @@ and the C3/C4/finding-6 fidelity are all correct. No Critical/High. Folded in:
 Toolchain: ruff clean, mypy --strict clean (18 files), 45 offline + 2 network
 tests pass, em-dash clean.
 
-### GitHub presentation (no AI attribution)
-
-- Rewrote history to strip the tooling co-author trailers and force-pushed; the
-  contributor graph now shows only the author. Reworded the public docs and
-  source docstrings so the review process reads in plain human terms (a design
-  plan, an independent senior-quant design review, a post-implementation review,
-  and a multi-perspective review with an adversarial cross-check at each fork),
-  keeping the substance. Untracked the internal scoping notes (gitignored).
-
 ### Shipped
 
 - **Repo on GitHub** (https://github.com/sjdoane/riskpremia). README
