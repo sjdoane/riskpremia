@@ -234,5 +234,23 @@ maximum-`timestamp` quote (not the file-last) and the early stop uses a grace ma
 dwarfs the disorder. The committed offline monthly snapshot (the reproducibility
 artifact, stamping the immutable Tardis daily object's provenance) is deferred to the
 consuming cost-model PR, once the needed months and expiries are fixed; the loader's live
-network test is its real-data proof. Next: the delta-hedged-option cost model (caveat 4's
-P&L-conservation invariant), then the short-variance null and the cost/peso gate.
+network test is its real-data proof.
+
+PR5d shipped the delta-hedged-option cost model (`DeribitOptionCostModel` +
+`execution/options.py`), cost-model-first: the transaction cost of a short option plus
+its perp delta hedge, every term a fraction of the underlying notional S, on Deribit's
+real cited fees (trade fee min(0.03% of underlying, 12.5% of premium), maker == taker;
+delivery 0.015% capped at 12.5% of value; the perp hedge leg). A load-bearing convention
+decision (review C1): S is the COST base, not the return base, so a short option's Sharpe
+must divide by the posted margin (`initial_margin_fraction * S`, pinned here), never by S.
+Conservatism is placed explicitly: the entry spread is MEASURED from the chain (bid vs
+mark, floored for crossed quotes), the delivery fee is a CEILING (PR5e charges it
+ITM-conditional), and the static entry+exit hedge is a FLOOR (the path rehedge is the
+dominant un-modeled term, caveat 3). `tradeable=False`: US retail cannot directly trade
+Deribit; the Coinbase Financial Markets path (CFTC-cleared May 2026) is institutional-live
+/ retail-coming-soon, a binding deploy caveat (the ADR 0001 C1 analogue); the routing-fee
+layer is carried at 0. The first real cost: ~16 bps of underlying round-trip on a near-ATM
+BTC call vs ~110 bps of premium. Next (PR5e): the per-trade short-variance P&L (premium
+minus terminal payoff plus the static-hedge P&L) with the option-leg P&L-conservation
+invariant (caveat 4) and the path-rehedge guard, then the short-variance null and the
+cost/peso gate, with the headline staying the measurement + the regime tail table.
