@@ -33,10 +33,21 @@ from pathlib import Path
 
 from riskpremia.data.boundary import PydanticDeribitDvolRow
 from riskpremia.data.errors import VenueFetchError
-from riskpremia.data.records import DvolCurrency, DvolRecord, SpotPriceRecord
+from riskpremia.data.records import (
+    DvolCurrency,
+    DvolRecord,
+    OptionQuoteRecord,
+    OptionType,
+    SpotPriceRecord,
+)
 
 _DVOL_HEADER = ("date", "dvol_close")
 _SPOT_HEADER = ("date", "close")
+_STRADDLE_HEADER = (
+    "entry_date", "expiry", "strike", "entry_underlying", "hold_hours",
+    "call_symbol", "call_bid", "call_mark", "call_delta",
+    "put_symbol", "put_bid", "put_mark", "put_delta",
+)
 
 
 def _date_to_ms(d: date) -> int:
@@ -166,3 +177,101 @@ def read_spot_csv(
         )
     records.sort(key=lambda r: r.period_end_ts)
     return records
+
+
+def read_spot_close_by_date(path: Path) -> dict[date, float]:
+    """The spot close keyed by UTC date (the gate's terminal-underlying lookup)."""
+    out: dict[date, float] = {}
+    for date_str, close_str in _read_csv(path, _SPOT_HEADER):
+        out[date.fromisoformat(date_str)] = float(Decimal(close_str))
+    return out
+
+
+# The committed monthly short-straddle entries fixture (the Layer-ii reproducibility
+# anchor): per first-of-month, the selected near-ATM call + put quotes (only the fields
+# the trade math consumes) + the entry date and the wall-clock hold. The realized expiry
+# underlying is NOT stored here; it is looked up from the spot fixture by the expiry date
+# (`read_spot_close_by_date`), so the gate reproduces offline from these two committed
+# fixtures.
+StraddleEntryRow = tuple[date, float, OptionQuoteRecord, OptionQuoteRecord]
+
+
+def _reconstruct_option(
+    symbol: str,
+    option_type: OptionType,
+    strike: str,
+    expiry: str,
+    entry_underlying: str,
+    bid: str,
+    mark: str,
+    delta: str,
+    entry_date: date,
+) -> OptionQuoteRecord:
+    """Rebuild the minimal OptionQuoteRecord the trade math consumes (the unused identity
+    fields are placeholders; `quote_ts` is the 01:00 entry instant)."""
+    return OptionQuoteRecord(
+        currency="BTC",
+        instrument=symbol,
+        option_type=option_type,
+        strike=Decimal(strike),
+        expiry=datetime.fromisoformat(expiry),
+        quote_ts=datetime(entry_date.year, entry_date.month, entry_date.day, 1, tzinfo=UTC),
+        underlying_index="BTC",
+        underlying_price=Decimal(entry_underlying),
+        synthetic_underlying=False,
+        bid_price=Decimal(bid),
+        mark_price=Decimal(mark),
+        delta=Decimal(delta),
+    )
+
+
+def write_straddle_entries_csv(path: Path, entries: list[StraddleEntryRow]) -> None:
+    """Write the committed monthly straddle entries, sorted by entry date.
+
+    Each entry is `(entry_date, hold_hours, call, put)`; strike/expiry/underlying are taken
+    from the call (the legs share them). Raises on an empty input, a leg mismatch, or an
+    unquoted leg (a committed entry must be fully tradeable)."""
+    if not entries:
+        raise VenueFetchError("write_straddle_entries_csv requires at least one entry")
+    buf = StringIO()
+    writer = csv.writer(buf, lineterminator="\n")
+    writer.writerow(_STRADDLE_HEADER)
+    for entry_date, hold_hours, call, put in sorted(entries, key=lambda e: e[0]):
+        if call.strike != put.strike or call.expiry != put.expiry:
+            raise VenueFetchError(f"straddle legs must share strike+expiry on {entry_date}")
+        for leg in (call, put):
+            if leg.bid_price is None or leg.mark_price is None or leg.delta is None:
+                raise VenueFetchError(f"{leg.option_type} leg not fully quoted on {entry_date}")
+        writer.writerow([
+            entry_date.isoformat(), call.expiry.isoformat(), str(call.strike),
+            str(call.underlying_price), repr(hold_hours),
+            call.instrument, str(call.bid_price), str(call.mark_price), str(call.delta),
+            put.instrument, str(put.bid_price), str(put.mark_price), str(put.delta),
+        ])
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(buf.getvalue(), encoding="utf-8", newline="\n")
+
+
+def read_straddle_entries_csv(path: Path) -> list[StraddleEntryRow]:
+    """Read the committed straddle entries back into `(entry_date, hold_hours, call, put)`."""
+    rows = list(csv.reader(path.read_text(encoding="utf-8").splitlines()))
+    if not rows or tuple(rows[0]) != _STRADDLE_HEADER:
+        raise VenueFetchError(
+            f"{path.name}: header {rows[0] if rows else None} != {list(_STRADDLE_HEADER)}"
+        )
+    out: list[StraddleEntryRow] = []
+    for r in rows[1:]:
+        if not r:
+            continue
+        if len(r) != len(_STRADDLE_HEADER):
+            raise VenueFetchError(
+                f"{path.name}: expected {len(_STRADDLE_HEADER)} columns, got {r!r}"
+            )
+        entry_date = date.fromisoformat(r[0])
+        expiry, strike, underlying, hold_hours = r[1], r[2], r[3], float(r[4])
+        call = _reconstruct_option(r[5], "call", strike, expiry, underlying, r[6], r[7], r[8],
+                                   entry_date)
+        put = _reconstruct_option(r[9], "put", strike, expiry, underlying, r[10], r[11], r[12],
+                                  entry_date)
+        out.append((entry_date, hold_hours, call, put))
+    return out

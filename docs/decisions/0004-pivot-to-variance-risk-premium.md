@@ -270,3 +270,19 @@ ceiling; financing is a floor on the option margin. Next (PR5f): the short-varia
 random-entry null + the cost/peso-bounded gate + the regime-conditional tail-loss table +
 the verdict, gathering and committing the first-of-month entry snapshots across the VRP
 window. The headline stays the measurement + the tail table, never a short-vol Sharpe.
+
+PR5f shipped the gate and the VERDICT, completing the study. A systematic monthly short
+straddle (a near-ATM call + put, each delta-hedged, held to expiry) over the VRP window (42
+of 42 first-of-months, 0 dropped) returns a net-of-cost Deflated Sharpe of 0.30 (below the
+0.95 bar; effective T 33), a slightly NEGATIVE mean net, and a catastrophic inverse-
+settlement crash tail (the worst in-sample month loses 2.7x the posted single-leg margin;
+the cited -37% / -50% one-day crash shocks lose 3.3x / 6.1x). **VERDICT: NON-VIABLE on both
+gates, the pre-registered cost/peso-bounded honest null.** The honest finding (and the value
+of the cost-model-first discipline): the positive Layer-i VRP measurement does NOT translate
+into a profitable tradeable straddle, because the static held-to-expiry straddle is a path-
+BLIND directional bet (realized 30-day endpoint moves averaged 11.9% vs 11.4% of premium
+collected, so it loses before costs), and the un-modeled path rehedge (the dominant cost,
+caveat 3, flagged on `OptionTradePnL`) is exactly what would convert it to a variance
+harvest. The measurement floor (Layer i) is the study's positive headline; the tradeable
+harvest is cost/peso-bounded. The recruiter-facing figures + the README results table are a
+deferred polish (PR5g).

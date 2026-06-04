@@ -3,6 +3,72 @@
 What shipped, plus every review finding and its resolution (rule 2). Newest
 first. This is the audit trail; STATUS.md is the current-state snapshot.
 
+## 2026-06-04, session 4 (PR5f): the Layer-ii short-variance gate + the verdict (an honest null)
+
+The finale of the VRP study's tradeable layer. A systematic monthly SHORT STRADDLE (a
+near-ATM call + put, each delta-hedged, held to expiry) across the VRP window, scored on
+the frozen ADR 0004 criterion. Shipped on `feat/vrp-short-variance-gate`:
+
+- `vrp/gate.py`: `build_straddle_trade` (the sum of two delta-hedged `simulate_option_trade`
+  legs, with a conservation post-init + a combined-ATM-delta check), the regime-conditional
+  `RegimeTail`, the cited `PesoShock`, the `GateVerdict`, and `build_gate_artifact` +
+  `GateArtifact` JSON serialization. The DSR series divides each month's net by `2 *
+  initial_margin_fraction` (a conservative-high base, understates the Sharpe); the tail loss
+  is reported as a multiple of the SINGLE-leg margin (so a single-leg crash is not halved).
+- `vrp/fixtures.py`: the committed monthly straddle-entries read/write + the spot-by-date
+  expiry lookup. `scripts/build_vrp_entries.py` (network, one-time) gathered 42 of 42
+  first-of-months (0 dropped) into `tests/data/vrp_straddle_entries.csv` (SHA256-stamped).
+  `scripts/run_vrp_gate.py` (offline) builds + commits `artifacts/vrp_short_variance_gate.json`.
+
+**THE VERDICT (real data, 42 BTC short straddles, 2022-01..2025-06): NON-VIABLE, the
+pre-registered cost/peso-bounded honest null.** Net-of-cost Deflated Sharpe 0.30 (below the
+0.95 bar; effective T 33, not underpowered); mean net slightly NEGATIVE (-0.009 coin/month;
+pre-ETF -0.017, post-ETF +0.002); 48% of months losing; the worst in-sample month loses
+2.7x the posted single-leg margin (account-ending in-sample, before any shock); the cited
+peso shocks (a -37% 'Black Thursday' and a -50% May-2021 one-day crash on a representative
+straddle) lose 3.3x and 6.1x the margin. **Both gates fail.** The honest finding: the
+positive Layer-i VRP measurement does NOT translate into a profitable tradeable straddle,
+because the static held-to-expiry straddle is a path-BLIND directional bet (realized 30-day
+endpoint moves averaged 11.9% vs 11.4% of premium collected, so it loses before costs), and
+the un-modeled path rehedge (the dominant cost) is what would convert it to a variance
+harvest. The measurement floor (Layer i) remains the study's positive headline; the
+tradeable harvest is cost/peso-bounded. 174 offline + 12 network tests; mypy --strict (43
+files), ruff, em-dash clean.
+
+#### Design review (APPROVE-WITH-CHANGES, 2 Critical + 6 High, all resolved; an adversarial fork review)
+
+- **C1 [fixed]:** separate the DSR return base (2x IM) from the tail base (the SINGLE-leg
+  IM), so dividing the single-leg crash by a doubled base cannot halve the apparent
+  catastrophe. **C2 [fixed]:** the peso-adjustment is a deterministic, CITED structural
+  shock (the -37%/-50% one-day precedents) on a representative straddle, not a free number
+  on the cherry-picked worst month.
+- **H1 [fixed]:** the both-legs-tradeable selection funnel is surfaced (n_dropped) and drops
+  a month loudly rather than silently sliding to a far strike. **H2 [fixed]:** the
+  daily-close-vs-08:00-Deribit-settlement terminal basis is flagged
+  (`terminal_basis_unmodeled`) + caveated (convexity makes it understate large-move losses).
+  **H3 [fixed]:** the underpowered DSR is subordinated, the verdict is `(dsr < 0.95) OR
+  (tail fails)` so a high DSR can never rescue a failing tail (pinned by a passing-DSR +
+  failing-tail test). **H4 [fixed]:** the straddle-sum + the combined-ATM-delta-near-zero
+  invariant. **H5 [fixed]:** the entries fixture SHA256-stamped, the spot coverage of every
+  expiry asserted loud, the artifact carries the two fixtures' SHAs. **H6 [fixed]:** the
+  committed JSON gate artifact is a required deliverable.
+- Mediums/Lows folded in: per-regime n reported (the post-ETF cell is ~17 obs, a tail lower
+  bound); CPCV correctly omitted + stated (~17 post-ETF obs cannot support it); the pass-
+  branch cross-check text; the path-rehedge + terminal-basis caveats carried in the artifact.
+
+#### Post-implementation review (SHIP, 0 Critical/High/Medium, 3 Low)
+
+The reviewer reproduced the artifact byte-identical, hand-recomputed the worst month (the
+2022-06 LUNA-crash straddle, a deep-ITM put) to 16 figures confirming the inverse
+`intrinsic_usd / S_T` settlement (a linear `/S0` would understate it 33%), independently
+recomputed the DSR (the block deflation RAISES it 0.273 -> 0.297, so the kill is not
+manufactured), confirmed the H3 subordination by a constructed DSR=1.0 + failing-tail input,
+and ran the false-null/false-pass attack: the negative mean is bug-free (the path-blind
+static straddle loses before costs; the kill rests on the inverse crash tail via the
+OR-verdict, robust to the cost knobs). Resolved the 3 Low (doc currency): the H3 test now
+asserts a passing DSR is still killed; STATUS/CHANGELOG brought current; the PR5g deferral
+(figures + the README results section) recorded.
+
 ## 2026-06-04, session 4 (PR5e): the per-trade short-variance option P&L (Layer ii)
 
 The per-trade math the null and gate (PR5f) will run, pure (no IO, no RNG), the analogue
