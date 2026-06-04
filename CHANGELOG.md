@@ -3,6 +3,58 @@
 What shipped, plus every review finding and its resolution (rule 2). Newest
 first. This is the audit trail; STATUS.md is the current-state snapshot.
 
+## 2026-06-04, session 4 (PR5e): the per-trade short-variance option P&L (Layer ii)
+
+The per-trade math the null and gate (PR5f) will run, pure (no IO, no RNG), the analogue
+of the carry's PR4a `simulate_trade`. Shipped on `feat/vrp-option-trade-pnl`:
+
+- `execution/options.py` `simulate_option_trade` + `OptionTradePnL`: the realized P&L of
+  selling one option, statically delta-hedging on the perp, and holding to expiry,
+  accounted in COIN per contract (the inverse settlement currency). The short receives
+  the bid premium, pays `terminal_payoff = intrinsic_usd / S_T` (the INVERSE cash
+  settlement), and runs a static inverse-perp delta hedge `delta * (1 - S0/S_T)`. A
+  `__attrs_post_init__` conservation guard and a `path_rehedge_unmodeled=True` marker so a
+  downstream Sharpe must acknowledge the static-endpoint proxy. `rehedge_cost_sensitivity`
+  bounds the un-modeled rehedge transaction cost (not the path-P&L gap).
+- `execution/cost.py` `DeribitOptionCostModel` gained `funding_capital_rate`, the
+  ITM-conditional `option_delivery_fee_on_intrinsic` (refining the PR5d ceiling), and
+  `margin_financing_fraction` (financing on the option margin, a FLOOR); `OptionPnLError`.
+
+154 -> 163 offline + 12 network tests; mypy --strict (src + scripts, 40 files), ruff,
+em-dash clean.
+
+#### Design review (REJECT, 2 Critical, both resolved before re-implementing)
+
+The review caught a load-bearing INVERSE-CONTRACT error in the first design and rejected
+it outright (the rule-1 process working as intended; an honest record):
+
+- **C1 [fixed]:** Deribit BTC/ETH options are inverse (coin-settled at the expiry price
+  S_T), so the short's payoff is `intrinsic_usd / S_T`, NOT the linear `intrinsic / S0`
+  the first design used. The linear form UNDER-STATED the put crash tail by ~10x (a 90%
+  crash settles ~9x the notional, not ~0.9x), the exact false-PASS direction the study
+  guards against. Re-implemented in coin per contract with the inverse settlement.
+- **C2 [fixed]:** the delta hedge is the Deribit INVERSE perp, P&L `delta * (1 - S0/S_T)`
+  (= `delta*S0*(1/S0 - 1/S_T)`), not the linear `delta*(S_T - S0)/S0` (which under-stated
+  the hedge loss on a down-move by ~2x, compounding C1).
+- Highs/Mediums folded into the re-implementation: the conservation invariant exact by a
+  fixed left-to-right association in the post-init (H1); the round-trip uses the
+  ITM-conditional delivery, with the swap from the ceiling pinned (H2, M1); the
+  static-endpoint status carried ON the object via `path_rehedge_unmodeled` so PR5f cannot
+  read it as a faithful variance return (H3); financing labeled a FLOOR, not conservative
+  (H4); guards on S_T<=0 / S0<=0 / hold<0 (M4); a dedicated `OptionPnLError` (L2); a
+  real-fixture crash-tail pin (L4); the single-delta-hedged-option proxy scoped (M2).
+
+#### Post-implementation review (SHIP, 0 Critical/High/Medium/Low)
+
+The reviewer re-derived the inverse settlement by hand and confirmed the fix: the 90%
+crash put pays exactly 9.0 coin (net -4.46), the linear form's 10.00x understatement is
+gone; the hedge signs are correct for the short call (long perp) and short put (short
+perp); the option+hedge residual is O(dS^2) and only ever more-negative into a crash (so
+the deferred inverse-greek subtlety cannot hide tail loss); the conservation guard had 0
+false raises over 22 awkward-value trades; the ITM-conditional delivery uses the coin
+intrinsic; every guard, the financing floor, and the rehedge caveat are in place. No
+findings.
+
 ## 2026-06-04, session 4 (PR5d): the delta-hedged-option cost model (Layer ii, cost-model-first)
 
 The cost side of the short-variance test, built BEFORE the P&L/null (rule 6). Shipped on

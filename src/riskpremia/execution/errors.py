@@ -42,3 +42,14 @@ class ScoringError(ExecutionError):
     CPCV embargo that cannot be made to cover the holding horizon. A NaN-returning
     scorer would silently produce a meaningless kill number, so these raise.
     """
+
+
+class OptionPnLError(ExecutionError):
+    """A per-trade short-variance option P&L could not be computed correctly (PR5e).
+
+    Raised on a non-positive entry or terminal underlying (the inverse settlement and
+    the hedge divide by the settlement price), a negative hold, an untradeable quote
+    (no bid/mark/delta), an out-of-domain delta, or a P&L conservation-invariant
+    violation. A NaN-returning P&L would silently poison the tail-loss table the kill
+    gate reads, so these raise loudly.
+    """
