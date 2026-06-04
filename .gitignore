@@ -113,6 +113,8 @@ runs/
 *.csv
 !docs/**/*.csv
 !tests/**/*.csv
+# committed test fixtures: a tiny real Binance Vision funding zip + its checksum
+!tests/data/*.zip
 
 # Derived study artifacts: the committed, regenerable JSON artifact that the
 # figures render from IS tracked (it carries no raw vendor data); large raw
