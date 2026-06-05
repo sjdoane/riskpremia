@@ -3,6 +3,128 @@
 What shipped, plus every review finding and its resolution (rule 2). Newest
 first. This is the audit trail; STATUS.md is the current-state snapshot.
 
+## 2026-06-04, session 5 (CTREND PR1): the point-in-time, delisting-complete universe data layer
+
+The data foundation for Study 3 (the CTREND crypto cross-sectional trend factor, ADR 0005).
+It turns the delisting-complete Binance Vision DAILY spot klines into (i) a daily panel
+(close + USD dollar volume per coin) the signal (PR2) computes the 28 daily technical
+signals on, and (ii) a weekly rebalance grid (returns + a point-in-time liquid-universe
+eligibility flag) the backtest (PR3) consumes. Shipped on `feat/ctrend-universe-data-layer`:
+
+- `data/records.py` `SpotKlineRecord` (close + quote/dollar volume); `data/sources/
+  binance_vision.py` extended: `list_spot_symbols` (delisting-complete S3 enumeration via
+  CommonPrefixes), `fetch_spot_klines` + `available_spot_months` (daily klines, delisting-
+  robust month intersection), `_parse_kline_zip` refactored to also return the quote-asset
+  volume (column 7 = USD dollar volume), and an optional retry/backoff for the multi-symbol
+  build (off by default, so the single-symbol funding/mark/spot paths and tests are
+  unchanged).
+- `ctrend/universe.py`: the exclusion filter (non-standard/non-ASCII tickers, stablecoins/fiat,
+  and leveraged tokens, with the UP/DOWN listed-base disambiguation), `build_daily_panel`, `build_weekly_panel` (daily ->
+  weekly resample, gap-safe `weekly_return`, explicit `forward_return`), and `pit_eligible`
+  (the point-in-time top-N-by-trailing-dollar-volume liquidity selection). `ctrend/
+  fixtures.py` (the committed daily-panel CSV) + `ctrend/artifact.py` (the universe summary
+  JSON) + `ctrend/errors.py`.
+- `scripts/build_ctrend_universe.py`: the one-time real-data build (enumerate -> concurrent
+  fetch -> daily/weekly panel -> ever-top-N_MAX trim -> losslessness + fidelity asserts ->
+  committed gzipped CSV fixture + artifact + manifest stamp). The committed daily panel
+  (`tests/data/ctrend_daily_panel_usdt.csv.gz`) is the reproducibility anchor; the weekly
+  grid + eligibility are pure functions of it.
+
+**The universe (live Binance Vision, 2026-06): 664 USDT-quoted spot symbols enumerated
+(delisting-complete), 67 excluded (48 leveraged tokens + 18 stablecoins/fiat + 1 non-standard
+non-ASCII ticker), 597 tradeable; the committed daily panel is trimmed to the 563 coins ever
+in the top-120 liquid set over 2019-01-06..2026-05-31 (387 weeks, 721,954 daily rows, 9.6 MB
+gzipped). The PIT liquid universe ramps from 20 eligible coins in early 2019 to the full 100
+from 2021 on.** Survivorship is demonstrated on the real data: SRMUSDT is retained and stops
+trading 2022-12-04 (a genuine post-FTX delisting), while LUNAUSDT and FTTUSDT trade through
+the present (Binance ticker reuse / relisting, exactly the case the H4 caveat flags). The
+full build surfaced one real-data edge case (a non-ASCII CJK novelty symbol that cannot be
+ASCII-encoded into an S3 URL), handled by the non-standard-ticker exclusion.
+
+The paper's exact method was verified first (the design review insisted the data granularity
+be settled before committing a panel): the 28 technical signals are computed on DAILY bars
+(14-day RSI, 3- to 200-day SMAs) with a WEEKLY rebalance, so the layer stores daily data and
+derives the weekly grid. The aggregation is the CS-C-ENet (PR2). The paper's market-cap
+universe + value-weighting are unavailable from Binance, so the dollar-volume top-N screen +
+(PR3) equal-weighting are documented deviations (ADR 0005 amendment + artifact caveats). Full
+design in docs/research/0002-ctrend-universe-design.md.
+
+#### Design review (APPROVE-WITH-CHANGES, 2 Critical + 4 High + 5 Medium + 6 Low, all resolved)
+
+The independent senior-quant design review grounded itself in the real code + polars 1.41.1.
+
+- **C1 [fixed]:** the `_parse_kline_zip` refactor to a 3-tuple breaks its pinned unit test;
+  resolved by updating the test (and asserting the new quote-volume field is parsed from
+  column 7), and resolving the open question in favour of refactor-in-place.
+- **C2 [fixed]:** the obvious `struct(...).rank(descending=True)` tie-break inverts the
+  symbol order (selecting the lexicographically-LAST coin on a volume tie, a silent
+  selection bug). Resolved with an explicit `sort(descending=[False, True, False])` +
+  `cum_sum` rank, pinned by an all-tied-volume test asserting the ASCENDING symbol wins.
+- **H1 [fixed]:** native weekly bars would foreclose the paper's daily-MA features. Resolved
+  by verifying the paper (daily features, weekly rebalance) and storing the DAILY panel
+  (the weekly grid derived from it); recorded as an ADR 0005 amendment.
+- **H2 [fixed]:** the liquidity-ranking basis (dollar volume vs the paper's market cap) is a
+  data-forced deviation; surfaced as an explicit artifact caveat distinct from the price
+  basis (mean-vs-median trailing volume is a tracked PR2/PR3 knob).
+- **H3 [fixed]:** the same-bar look-ahead trap (decide and realize on the same close).
+  Resolved by documenting `weekly_return` as contemporaneous AND exposing an explicit
+  `forward_return` (the holding return over (t, t+1]) so PR3 cannot use the same-bar return.
+- **H4 [fixed]:** the canonical-collision / ticker-reuse survivorship subtlety (1000SHIB vs
+  SHIB, LUNA -> LUNC). Resolved by keying the panel on `symbol` (canonical informational
+  only, never a dedup key) and documenting that a rename appears as a delisting + a fresh
+  listing (the dead leg retained), with the decision in the design doc + artifact caveats.
+- **M1 [fixed]:** the rolling/history windows count weekly BARS, not calendar weeks;
+  documented precisely (== calendar weeks absent a halt) and pinned by a gappy-panel test.
+  **M2 [fixed]:** checksum-before-parse kept for the ~30k-file build, with a per-request
+  retry/backoff (build-only) and file-granular resumability via the content cache.
+  **M3 [fixed]:** a per-symbol fetch failure is FATAL in the build (a silent drop would
+  reintroduce survivorship through the harness). **M4 [fixed]:** the exclusion sets are
+  committed constants and the full excluded list is emitted into the artifact so a missed
+  stablecoin is visible; the UP/DOWN rule uses the post-strip listed-base set, pinned by
+  tests (JUP kept, BTCUP excluded). **M5 [fixed]:** `week_end` is normalized to the Sunday
+  calendar Date in `build_weekly_panel` itself, so the live build and the committed-fixture
+  reproduction compare like-for-like (byte-stable).
+- **L1 [fixed]:** `min_samples` (not the deprecated `min_periods`). **L2 [fixed]:**
+  `CtrendError(ValueError)` mirroring `VrpError`. **L3 [fixed]:** `pit_eligible` /
+  `build_weekly_panel` sort defensively before the windowed ops (the `make_label_horizons`
+  precedent). **L4 [fixed]:** `SpotKlineRecord` imported only at its use site so ruff does
+  not strip it. **L5 [resolved by build, decision evolved]:** the plain daily panel is ~35 MB
+  (too heavy for a fixture), so the committed panel is GZIPPED (~9.6 MB) with a two-hash model
+  that stays cross-platform stable: the universe artifact pins the decompressed-CONTENT SHA
+  (platform-independent), and the snapshot manifest stamps the committed `.gz` blob's FILE SHA
+  (git preserves the blob, `.gitattributes` marks `*.gz binary`); the CSV values are written as
+  exact Decimals with trailing zeros stripped (lossless). **L6 [fixed]:** the delisting proof
+  is asserted (a named dead coin present with a last week before the window end) in the
+  reproduction test (SRMUSDT satisfies it).
+
+#### Post-implementation review (SHIP, 0 Critical/High/Medium, 3 Low; reproduced from first principles)
+
+The independent senior-quant post-implementation review re-derived every load-bearing number
+from the committed `.gz` panel and the live bucket (not from comments) and could not break the
+PIT property. Confirmed by running code: the decompressed-content SHA + the `.gz` file SHA +
+`verify_snapshot` all match; the gzip is byte-reproducible (mtime=0); 721,954 rows / 563
+symbols / 0 duplicate (date,symbol) / sorted; the eligible-by-week breadth, the ever-eligible
+count, the trim set (ever-top-120 == the 563 committed), and the delisting proof all
+reproduce; a late-week volume perturbation changes NO earlier week's eligibility (no
+look-ahead); `trailing_dollar_volume` is a backward mean ending at t (0 mismatches vs a
+hand-rolled mean); `forward_return(t) == weekly_return(t+1)` with 0 violations and null across
+all 4 real calendar-week gaps; non-rankable new-coin spikes never consume a top-N slot (max
+eligible is exactly 100); the trim is lossless at top_n in {1,20,100,120}; the exclusion filter
+has no false positives (JUP/SUPER/AUDIO/PEOPLE/WBTC kept) or false negatives; the artifact JSON
+is 0 non-ASCII bytes (the CJK symbol escaped); `pytest -m "not network"` 195 pass, `-m network`
+4 pass, mypy + ruff clean. Resolved:
+
+- **L1 [fixed]:** this CHANGELOG entry's shipped-summary numbers were pre-build placeholders
+  (66 excluded / 598 tradeable / a non-`.gz` path) and the L5 line described the superseded
+  plain-CSV decision; corrected to the shipped 67 / 597 / gzip-with-two-hash reality.
+- **L2 [accepted, documented]:** the offline reproduction test pins the panel-derived fields
+  but not `n_symbols_enumerated` / the `excluded` list (build-time provenance, the VRP
+  precedent); the `test_enumeration_is_delisting_complete` network test guards enumeration.
+- **L3 [accepted, documented]:** `n_weeks=387` (the full grid) vs the 380-entry
+  `eligible_by_week` series differ because the first 7 weeks (early 2019) have 0 eligible coins
+  (no coin has the 8-bar history yet) and 0-eligible weeks are omitted from the series; both are
+  internally consistent and honest.
+
 ## 2026-06-04, session 4 (PR5f): the Layer-ii short-variance gate + the verdict (an honest null)
 
 The finale of the VRP study's tradeable layer. A systematic monthly SHORT STRADDLE (a

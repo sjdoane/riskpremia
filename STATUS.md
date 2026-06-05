@@ -4,9 +4,11 @@ Single source of truth for where Project RiskPremia is and what is deferred.
 Read this FIRST on any new session, then the ADRs it points to. Update after
 every meaningful work block (rule 2).
 
-Last updated: 2026-06-04 (session 4: the VRP study completed both layers (Layer i positive measurement, Layer ii NON-VIABLE null, PR5a-PR5f); PIVOTED to Study 3, the CTREND crypto cross-sectional trend factor (ADR 0005), per the pivot-on-failure rule + Sam's directive to keep pivoting until a strategy survives the gate; the build is starting).
+Last updated: 2026-06-05 (session 5: CTREND PR1 DONE, the point-in-time delisting-complete multi-coin universe data layer, on `feat/ctrend-universe-data-layer`; design plan + senior-quant design review + post-implementation review (SHIP) per rule 1; next is PR2, the fitted signal).
 
-**Study 3 (CTREND, ADR 0005, the active study): a faithful replication-and-stress of the one peer-reviewed crypto cost-survival claim (Fieberg et al., JFQA 2025) under the project's REALISTIC retail cost model + a 2022-2026 OOS extension + proper deflation. The FIRST FITTED signal in the project (the CPCV + trial-registry + DSR deflation become load-bearing). A net-of-cost Deflated-Sharpe PASS = a strategy that clears the gate (cross-checked before belief); a FAIL = an honest falsification of the published claim. Build order: PR1 the point-in-time multi-coin universe data layer, PR2 the trend-feature signal + cross-sectional elastic-net aggregation, PR3 the backtest + the kill gate + the verdict. Read ADR 0005 first.**
+**Study 3 (CTREND, ADR 0005, the active study): a faithful replication-and-stress of the one peer-reviewed crypto cost-survival claim (Fieberg et al., JFQA 2025) under the project's REALISTIC retail cost model + a 2022-2026 OOS extension + proper deflation. The FIRST FITTED signal in the project (the CPCV + trial-registry + DSR deflation become load-bearing). A net-of-cost Deflated-Sharpe PASS = a strategy that clears the gate (cross-checked before belief); a FAIL = an honest falsification of the published claim. Build order: PR1 the point-in-time multi-coin universe data layer (DONE), PR2 the trend-feature signal + cross-sectional elastic-net aggregation (NEXT), PR3 the backtest + the kill gate + the verdict. Read ADR 0005 (+ its PR1 amendment) and docs/research/0002-ctrend-universe-design.md first.**
+
+**CTREND PR1 (the universe data layer, DONE):** the paper was verified first (28 DAILY technical signals, e.g. a 14-day RSI + 3-to-200-day SMAs, with a WEEKLY rebalance and a 52-week rolling CS-C-ENet fit), so the layer stores DAILY spot data and derives the weekly grid. `data/sources/binance_vision.py` gained `list_spot_symbols` (delisting-complete S3 enumeration), `fetch_spot_klines` / `available_spot_months` (daily klines, delisting-robust), and a quote-volume parse. `ctrend/universe.py` is the load-bearing PIT spine (the stable/leveraged/non-ASCII exclusion filter, `build_daily_panel`, `build_weekly_panel` with a gap-safe `weekly_return` + an explicit `forward_return`, and `pit_eligible` = top-N by trailing dollar volume, point-in-time). `ctrend/fixtures.py` + `ctrend/artifact.py` + `scripts/build_ctrend_universe.py` produce the committed gzipped daily panel (`tests/data/ctrend_daily_panel_usdt.csv.gz`, 9.6 MB, two-hash reproducibility) + `artifacts/ctrend_universe.json`. The real universe: 664 USDT symbols enumerated, 67 excluded, 597 tradeable, 563 committed (ever in the top-120), 387 weeks (2019-01-06..2026-05-31), the liquid universe ramping 20 -> 100 eligible coins. The paper's market-cap universe + value-weighting are unavailable from Binance, so the dollar-volume top-N screen + (PR3) equal-weighting are documented deviations.
 
 ## One-line state
 
@@ -37,10 +39,11 @@ Repo: https://github.com/sjdoane/riskpremia. PR5f on `feat/vrp-short-variance-ga
 ```
 $env:PYTHONIOENCODING="utf-8"
 $py = "C:\Users\SamJD\.venvs\riskpremia\Scripts\python.exe"
-& $py -m pytest -q -m "not network" # 174 pass (offline); never touch the off-limits pit-backtest venvs
-& $py -m pytest -q -m network       # live: Binance Vision + OKX + Deribit DVOL + Tardis (the real-data proof)
-& $py -m mypy                       # strict, src + scripts
+& $py -m pytest -q -m "not network" # 195 pass (offline); never touch the off-limits pit-backtest venvs
+& $py -m pytest -q -m network       # 16 live: Binance Vision + OKX + Deribit DVOL + Tardis (the real-data proof)
+& $py -m mypy                       # strict, src + scripts (49 files)
 & $py -m ruff check src tests scripts
+& $py -m scripts.build_ctrend_universe # one-time: fetch the live USDT universe -> committed CTREND panel + artifact + stamp
 & $py -m scripts.build_vrp_artifact # one-time: fetch live data -> committed VRP artifact + fixtures + manifest stamp
 & $py -m scripts.regenerate_figures # render docs/figures/*.png from the committed artifact (no network)
 ```

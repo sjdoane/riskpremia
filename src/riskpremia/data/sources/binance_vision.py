@@ -26,6 +26,8 @@ premium is computed.
 from __future__ import annotations
 
 import csv
+import time
+import urllib.error
 import urllib.request
 import xml.etree.ElementTree as ET
 import zipfile
@@ -42,6 +44,7 @@ from riskpremia.data.records import (
     FundingRecord,
     InstrumentId,
     MarkPriceRecord,
+    SpotKlineRecord,
     SpotPriceRecord,
     Venue,
 )
@@ -56,6 +59,7 @@ _S3_LIST_URL = "https://s3-ap-northeast-1.amazonaws.com/data.binance.vision"
 _S3_NS = "{http://s3.amazonaws.com/doc/2006-03-01/}"
 _KLINE_CLOSE_IDX = 4
 _KLINE_CLOSE_TIME_IDX = 6
+_KLINE_QUOTE_VOLUME_IDX = 7  # "quote asset volume" = the USD(T) dollar volume directly
 
 # Binance Vision kline dumps switched their open_time / close_time from epoch
 # MILLISECONDS (13-digit) to epoch MICROSECONDS (16-digit) in the late-2024 monthly
@@ -116,11 +120,22 @@ class BinanceVisionSource:
         base_url: str = _BASE_URL,
         s3_list_url: str = _S3_LIST_URL,
         timeout: float = 30.0,
+        max_fetch_attempts: int = 1,
+        retry_backoff_s: float = 0.0,
     ) -> None:
         self._raw_root = raw_root
         self._base_url = base_url.rstrip("/")
         self._s3_list_url = s3_list_url.rstrip("/")
         self._timeout = timeout
+        # Retry is OFF by default (max_fetch_attempts=1) so the single-symbol funding/mark/
+        # spot paths and their unit tests are byte-for-byte unchanged. The multi-symbol
+        # universe build (scripts/build_ctrend_universe.py) opts into a few attempts with a
+        # linear backoff so a transient S3 reset over ~30k requests does not abort the run
+        # (design review M2). Retry covers only network errors, never a checksum mismatch.
+        if max_fetch_attempts < 1:
+            raise VenueFetchError(f"max_fetch_attempts must be >= 1; got {max_fetch_attempts}")
+        self._max_fetch_attempts = max_fetch_attempts
+        self._retry_backoff_s = retry_backoff_s
 
     # ----- S3 listing -------------------------------------------------------
 
@@ -169,13 +184,63 @@ class BinanceVisionSource:
 
     # ----- download + verify ------------------------------------------------
 
+    def _urlopen_retry(self, url: str) -> bytes:
+        """GET `url`, retrying only on transient network errors (design review M2).
+
+        With the default `max_fetch_attempts=1` this is a single `urlopen` (the prior
+        behaviour). The universe build raises it to a few attempts with a linear backoff
+        so one transient reset over ~30k requests does not abort the run. A non-network
+        failure (e.g. a malformed XML downstream) is not caught here; a checksum mismatch
+        is handled by the caller (delete + re-fetch), not by this retry.
+        """
+        last: Exception | None = None
+        for attempt in range(self._max_fetch_attempts):
+            try:
+                with urllib.request.urlopen(url, timeout=self._timeout) as resp:
+                    data: bytes = resp.read()
+                    return data
+            except (urllib.error.URLError, TimeoutError, OSError) as exc:
+                last = exc
+                if attempt + 1 < self._max_fetch_attempts and self._retry_backoff_s > 0:
+                    time.sleep(self._retry_backoff_s * (attempt + 1))
+        assert last is not None  # the loop runs >= 1 time, so a failure set `last`
+        raise last
+
     def _fetch_to(self, url: str, dest: Path) -> Path:
         """Download `url` to `dest` if absent; return `dest`."""
         if not dest.exists():
             dest.parent.mkdir(parents=True, exist_ok=True)
-            with urllib.request.urlopen(url, timeout=self._timeout) as resp:
-                dest.write_bytes(resp.read())
+            dest.write_bytes(self._urlopen_retry(url))
         return dest
+
+    def _list_common_prefixes(self, prefix: str) -> list[str]:
+        """The immediate sub-prefixes under `prefix` (S3 delimiter listing), sorted.
+
+        Used to enumerate symbol directories without listing every object. Follows the
+        same marker pagination as `_list_keys` but reads `CommonPrefixes` (one per
+        sub-directory) under `delimiter=/`.
+        """
+        out: list[str] = []
+        marker = ""
+        while True:
+            url = f"{self._s3_list_url}?prefix={prefix}&delimiter=/&max-keys=1000"
+            if marker:
+                url += f"&marker={marker}"
+            root = ET.fromstring(self._urlopen_retry(url))
+            page = [
+                cp.text
+                for c in root.findall(f"{_S3_NS}CommonPrefixes")
+                if (cp := c.find(f"{_S3_NS}Prefix")) is not None and cp.text is not None
+            ]
+            out.extend(page)
+            truncated = root.find(f"{_S3_NS}IsTruncated")
+            if truncated is None or truncated.text != "true" or not page:
+                break
+            nextmarker = root.find(f"{_S3_NS}NextMarker")
+            marker = nextmarker.text if nextmarker is not None and nextmarker.text else page[-1]
+            if not marker:
+                break
+        return sorted(out)
 
     def _download_and_verify(self, key: str, relpath: str) -> Path:
         """Download `<key>` and its `.CHECKSUM`, verify SHA256, content-cache.
@@ -227,14 +292,22 @@ class BinanceVisionSource:
             out.append(row.to_record(instrument))
         return out
 
-    def _parse_kline_zip(self, path: Path) -> list[tuple[int, Decimal]]:
-        """Return (close_time_ms, close) for each kline row (header tolerated)."""
-        out: list[tuple[int, Decimal]] = []
+    def _parse_kline_zip(self, path: Path) -> list[tuple[int, Decimal, Decimal]]:
+        """Return (close_time_ms, close, quote_volume) for each kline row (header tolerated).
+
+        `quote_volume` is the kline "quote asset volume" (column 7), the USD(T)-denominated
+        dollar volume the CTREND universe ranks on. The price-only callers (`fetch_marks`,
+        `fetch_spot`) discard it by unpacking `(_ms, close, _qv)`; only `fetch_spot_klines`
+        keeps it.
+        """
+        out: list[tuple[int, Decimal, Decimal]] = []
         for r in csv.reader(StringIO(self._read_single_member(path))):
             if not r or not r[0].lstrip("-").isdigit():
                 continue  # skip a header row (newer Binance Vision klines carry one)
             close_ms = _kline_close_time_to_ms(int(r[_KLINE_CLOSE_TIME_IDX]))
-            out.append((close_ms, Decimal(r[_KLINE_CLOSE_IDX])))
+            out.append(
+                (close_ms, Decimal(r[_KLINE_CLOSE_IDX]), Decimal(r[_KLINE_QUOTE_VOLUME_IDX]))
+            )
         return out
 
     # ----- public fetch -----------------------------------------------------
@@ -263,7 +336,7 @@ class BinanceVisionSource:
             )
             relpath = f"binance_vision/{symbol}/marks/{symbol}-{interval}-{month}.zip"
             path = self._download_and_verify(key, relpath)
-            for close_time_ms, close in self._parse_kline_zip(path):
+            for close_time_ms, close, _qv in self._parse_kline_zip(path):
                 out.append(
                     MarkPriceRecord(
                         instrument=instrument,
@@ -281,7 +354,7 @@ class BinanceVisionSource:
             key = f"data/spot/monthly/klines/{symbol}/{interval}/{symbol}-{interval}-{month}.zip"
             relpath = f"binance_vision/{symbol}/spot/{symbol}-{interval}-{month}.zip"
             path = self._download_and_verify(key, relpath)
-            for close_time_ms, close in self._parse_kline_zip(path):
+            for close_time_ms, close, _qv in self._parse_kline_zip(path):
                 out.append(
                     SpotPriceRecord(
                         spot_venue="binance_spot",
@@ -292,3 +365,71 @@ class BinanceVisionSource:
                     )
                 )
         return [r for r in out if start <= r.period_end_ts < end]
+
+    # ----- multi-coin universe (CTREND Study 3, PR1) ------------------------
+
+    def list_spot_symbols(self, quote: str = "USDT") -> tuple[str, ...]:
+        """Every spot symbol ending in `quote`, enumerated from the S3 bucket, sorted.
+
+        Delisting-complete: the bucket retains the directories of symbols that have since
+        been delisted (the listing is of stored objects, not the live API), so the
+        returned set includes dead coins (the survivorship-safe universe source for ADR
+        0005). A `quote` suffix match keeps only the matched-quote pairs (the dominant
+        liquid quote is USDT); a name equal to the quote (a malformed prefix) is excluded.
+        """
+        prefixes = self._list_common_prefixes("data/spot/monthly/klines/")
+        symbols = {
+            name
+            for p in prefixes
+            if (name := p.rstrip("/").rsplit("/", 1)[-1]).endswith(quote) and len(name) > len(quote)
+        }
+        return tuple(sorted(symbols))
+
+    def fetch_spot_klines(
+        self, symbol: str, interval: str, start: datetime, end: datetime
+    ) -> list[SpotKlineRecord]:
+        """Spot klines (close + quote/dollar volume) for `symbol` at `interval` in [start, end).
+
+        The CTREND universe source method (ADR 0005): reads the close (column 4) and the
+        quote-asset volume (column 7, the USD(T) dollar volume) from each month's
+        checksum-verified spot-kline zip, stamped on the close time. `interval` is
+        typically "1d" (the daily bars the 28 technical signals are computed on).
+
+        Only months with a published dump are fetched (the window is intersected with
+        `available_spot_months`), so a delisted symbol whose life ends inside the window
+        does not 404 on the post-delisting months (delisting-robust, ADR 0005 caveat 4).
+        """
+        instrument = InstrumentId.of(self.venue, symbol)
+        wanted = set(_month_strings(start, end))
+        available = set(self.available_spot_months(symbol, interval))
+        out: list[SpotKlineRecord] = []
+        for month in sorted(wanted & available):
+            key = f"data/spot/monthly/klines/{symbol}/{interval}/{symbol}-{interval}-{month}.zip"
+            relpath = f"binance_vision/{symbol}/spot/{symbol}-{interval}-{month}.zip"
+            path = self._download_and_verify(key, relpath)
+            for close_time_ms, close, quote_volume in self._parse_kline_zip(path):
+                out.append(
+                    SpotKlineRecord(
+                        instrument=instrument,
+                        period_end_ts=ms_to_utc(close_time_ms),
+                        close=close,
+                        quote_volume=quote_volume,
+                    )
+                )
+        return [r for r in out if start <= r.period_end_ts < end]
+
+    def available_spot_months(self, symbol: str, interval: str) -> tuple[str, ...]:
+        """The `YYYY-MM` periods with a published spot-kline zip for `(symbol, interval)`.
+
+        Lets the universe build skip a month with no dump rather than 404 on it (a
+        just-listed or already-delisted symbol has a bounded month range).
+        """
+        prefix = f"data/spot/monthly/klines/{symbol}/{interval}/"
+        suffix = ".zip"
+        months: list[str] = []
+        for key in self._list_keys(prefix):
+            name = key.rsplit("/", 1)[-1]
+            if name.endswith(suffix):
+                stem = name[: -len(suffix)]
+                months.append(stem.rsplit("-", 2)[-2] + "-" + stem.rsplit("-", 2)[-1])
+        return tuple(sorted(set(months)))
