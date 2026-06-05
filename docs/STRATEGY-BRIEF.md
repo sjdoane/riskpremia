@@ -22,7 +22,7 @@ acceptable and impressive deliverable; a blown-up account is not.
 
 The research strongly favored prediction markets (Whelan et al.: Kalshi takers
 lose ~32%, makers ~10%), but that is the domain of a separate, off-limits live
-Kalshi agent. This is a SEPARATE project in a different market, both to respect
+Kalshi system. This is a SEPARATE project in a different market, both to respect
 that boundary and because a new market is a broader, more additive skill
 demonstration. Prediction-market strategies are therefore out of scope here.
 
