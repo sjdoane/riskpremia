@@ -224,3 +224,30 @@ the published text (Fieberg et al., JFQA 2025). Findings that refine the v1 spec
 
 The design + the per-finding resolutions are in docs/research/0002-ctrend-universe-design.md
 and CHANGELOG.md.
+
+## Amendment (2026-06-05, PR3 net-of-cost gate verdict)
+
+PR3 completed the pre-registered net-of-cost gate. The forecast series is recomputed from
+the committed daily panel, weekly equal-weight top-quintile and top-minus-bottom portfolios
+are formed, spot-only turnover is charged through the project's realistic `VenueCostModel`,
+and the 2022+ OOS series is scored with a frozen trial count and event-time-purged CPCV.
+The gate statistic is the minimum purged CPCV test-fold DSR, a conservative anti-false-pass
+choice that prices the regime instability PR2 surfaced.
+
+**Verdict: NON-VIABLE retail long-only honest null.** The retail long-only top quintile
+loses after costs on the held-out window: mean net return -0.906%/week, full-window DSR
+0.0034, CPCV-min DSR 0.0031, below the 0.95 bar. The academic long-short comparison has
+positive mean net return (+0.197%/week) but also fails the conservative CPCV-min gate
+(0.0035; full-window DSR 0.2252), so the long-short paper comparison does not rescue the
+claim under this retail-cost, liquid-universe stress.
+
+Two pass blockers remain explicit caveats rather than hidden assumptions: the Binance
+liquid universe is not a US spot listing intersection, and the 2 bps spot half-spread is
+favourable for a top-100 alt basket. Because the strategy fails decisively even under those
+favourable assumptions, the null can ship; any future pass would require a US-listed
+universe and measured alt spreads before belief.
+
+The PR3 design, senior-quant design review resolutions, and post-implementation review
+resolutions are recorded in docs/research/0004-ctrend-gate-design.md and CHANGELOG.md. The
+regenerable verdict artifact is `artifacts/ctrend_gate.json`; reproduce it with
+`python -m scripts.run_ctrend_gate`.

@@ -3,6 +3,72 @@
 What shipped, plus every review finding and its resolution (rule 2). Newest
 first. This is the audit trail; STATUS.md is the current-state snapshot.
 
+## 2026-06-05, session 7 (CTREND PR3): the net-of-cost gate + verdict
+
+The CTREND study's kill gate is built and the verdict is an honest null. Shipped on
+`feat/ctrend-gate`:
+
+- `ctrend/gate.py`: weekly equal-weight CTREND portfolio construction, spot-only turnover
+  cost from `VenueCostModel.leg_cost_fraction(leg="spot", taker=...)`, the conservative
+  missing-return policy, the frozen trial ledger, DSR scoring, CPCV split scoring, typed
+  gate artifact serialization, and artifact loading.
+- `scripts/run_ctrend_gate.py`: offline regeneration entry point. It reads the committed
+  daily panel, rebuilds the weekly PIT universe and CTREND forecasts, writes
+  `artifacts/ctrend_gate.json`, and prints the retail and academic verdicts.
+- `tests/unit/test_ctrend_gate.py` and `tests/unit/test_ctrend_gate_reproduces.py`: focused
+  turnover and missing-return tests, plus the offline reproduction gate that rebuilds the
+  committed verdict from `tests/data/ctrend_daily_panel_usdt.csv.gz`.
+- `docs/research/0004-ctrend-gate-design.md`: the reviewed PR3 design plan and review
+  resolutions.
+
+**VERDICT: NON-VIABLE retail long-only honest null.** On the held-out 2022+ window, the
+retail long-only top quintile has mean net return **-0.906%/week**, turnover **1.16/week**,
+full-window DSR **0.0034**, and conservative CPCV-min DSR **0.0031**, far below the
+0.95 bar. Missing selected returns are charged as -100% delisting losses in the headline
+(8 selected retail names), and the favourable drop-and-renormalize sensitivity is recorded
+but does not drive the verdict. The academic long-short comparison has positive mean net
+return (**+0.197%/week**) but still fails the conservative CPCV-min DSR gate (**0.0035**;
+full-window DSR **0.2252**), so it does not rescue either the retail headline or the
+paper-comparison stress. Trial family: 8 realized variants (portfolio form x execution
+style x missing-return treatment), `v_sr=0.007287`, `n_effective=8`.
+
+#### Design review (APPROVE-WITH-CHANGES, 2 Critical + 4 High + 2 Medium/Low, all resolved or accepted)
+
+- **C1 [fixed]:** CPCV was only wired in the first design, not used as the validation
+  estimator. Resolved by making the minimum purged CPCV test-fold DSR the gate statistic.
+- **C2 [fixed]:** the initial trial count of 2 undercounted the documented design family.
+  Resolved by freezing `naive_effective_n=8` and recording portfolio form, execution style,
+  and missing-return treatment variants.
+- **H1 [fixed]:** a long-only failure must not be overclaimed as a direct falsification of
+  the paper's long-short result. Resolved by splitting the verdict into retail long-only
+  deployability and academic long-short comparison. Here both fail the conservative
+  CPCV-min gate.
+- **H2 [fixed]:** missing selected `forward_return` values could create a false pass if
+  dropped silently. Resolved by charging selected missing returns as -100% delisting losses
+  in the headline, counting them, and recording a favourable sensitivity separately.
+- **H3 [accepted, pass blocker]:** the Binance liquid universe is not a US spot listing
+  intersection. A pass would require a US-listed-universe rebuild before belief; the fail can
+  ship under this caveat.
+- **H4 [accepted, pass blocker]:** the carry study's 2 bps spot half-spread is favourable
+  for a top-100 alt basket. A pass would require measured alt spreads; a fail under the
+  favourable spread is robust to wider measured spreads.
+
+#### Post-implementation review (SHIP after one Medium fix, 0 Critical/High)
+
+The reviewer rebuilt the gate from the committed panel and reproduced the scored numbers.
+No Critical or High findings. Resolved:
+
+- **Medium-1 [fixed]:** the artifact's forecast audit hash used raw elastic-net forecast
+  floats, which can drift at the last bit across numeric paths even when all scored results
+  match. Resolved by hashing the score-driving gate input (`week_end`, `symbol`, `quintile`,
+  `forward_return`) instead, and adding an exact reproduction-test assertion for the hash.
+- **Low [accepted]:** the PR3 trial penalty is narrower than ADR 0005's broad wording, but
+  the strategy fails with CPCV-min DSR near zero, so this cannot create a false pass here.
+
+Verification: `pytest -q -m "not network"` 218 pass / 16 deselected; `pytest -q -m network`
+16 pass / 218 deselected; `mypy` clean (55 source files); `ruff check src tests scripts`
+clean.
+
 ## 2026-06-05, session 6 (CTREND PR2): the fitted signal (the 28 features + the CS-C-ENet)
 
 The first FITTED model in the project: a faithful replication of the CTREND cross-sectional
