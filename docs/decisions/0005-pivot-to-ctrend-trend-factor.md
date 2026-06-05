@@ -196,3 +196,31 @@ backtest + the kill gate + the verdict. A Deflated-Sharpe PASS is a strategy tha
 gate (cross-checked before belief); a FAIL is an honest falsification of the published cost-
 survival claim. The next flip condition to watch is the OOS 2022-2026 window decaying the
 edge below the bar, in which case the falsification is the headline.
+
+## Amendment (2026-06-04, PR1 design verification)
+
+The PR1 design review insisted the panel's data granularity be settled before any panel is
+committed (it is expensive to redo), so the paper's exact construction was verified against
+the published text (Fieberg et al., JFQA 2025). Findings that refine the v1 spec above:
+
+- The 28 technical signals are computed on DAILY bars (a 14-day RSI, 3- to 200-day SMAs,
+  daily volume and volatility indicators) even though the rebalance is WEEKLY (a fixed
+  rolling 52-week fit predicting the next week, value-weighted quintiles). So the v1
+  "weekly resampling" line is refined: the universe data layer stores DAILY price + volume
+  and derives the weekly rebalance grid (returns + the PIT eligibility) from it. The
+  committed reproducibility anchor is the daily panel; the weekly grid is a pure function
+  of it.
+- The aggregation is the cross-sectional combined elastic net (CS-C-ENet of Han, He,
+  Rapach, Zhou 2024): per-signal cross-sectional univariate forecasts, then a pooled
+  elastic net (L1/L2 mix 0.5, lambda by corrected AIC) selecting and averaging the
+  positive-weight forecasts. This is PR2's spec.
+- The paper's universe is a MARKET-CAP floor (>= USD 1M) with VALUE-WEIGHTED portfolios;
+  the cost-survival claim PR3 tests is its Table 8 "top-100 most liquid" subset (Amihud).
+  Binance Vision has no market cap, so PR1 screens by trailing USD DOLLAR VOLUME (top-N)
+  and PR3 will equal-weight; these are the data-forced deviations already named in the v1
+  spec and caveat 1, now explicit and carried as artifact caveats. Stablecoin/fiat pairs
+  and leveraged tokens are excluded (a dollar-volume-ranked universe would otherwise be
+  dominated by pegs; the paper's "coins" are not pegs or decaying derivatives).
+
+The design + the per-finding resolutions are in docs/research/0002-ctrend-universe-design.md
+and CHANGELOG.md.

@@ -14,6 +14,10 @@ data/snapshots/manifest.toml text eol=lf
 *.csv text eol=lf
 # committed test-fixture zip is hash-critical: never normalize it
 *.zip binary
+# the committed gzipped daily panel is a binary blob (the CTREND universe, ADR 0005); never
+# EOL-normalize. Its file SHA is stamped in the manifest; the decompressed-content SHA (the
+# cross-platform pin) is in the universe artifact.
+*.gz binary
 # committed figures are binary; never EOL-normalize (the JSON artifact, not the PNG
 # bytes, is the audited reproducibility contract).
 *.png binary

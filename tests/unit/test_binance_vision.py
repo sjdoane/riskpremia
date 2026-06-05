@@ -138,16 +138,19 @@ def _make_kline_zip(path: Path, lines: list[str]) -> None:
 
 def test_parse_kline_zip_with_and_without_header(tmp_path: Path) -> None:
     src = BinanceVisionSource(Path("unused"))
-    data_row = "1577836800000,9000,9100,8900,9050.5,10,1577865599999,0,0,0,0,0"
+    # close = col 4 (9050.5), close_time = col 6, quote_asset_volume = col 7 (the USD
+    # dollar volume) is now parsed and returned as the third tuple element.
+    data_row = "1577836800000,9000,9100,8900,9050.5,10,1577865599999,90500.25,0,0,0,0"
     header = "open_time,open,high,low,close,volume,close_time,qv,count,tb,tbq,ignore"
+    expected = [(1577865599999, Decimal("9050.5"), Decimal("90500.25"))]
 
     no_header = tmp_path / "k1.zip"
     _make_kline_zip(no_header, [data_row])
-    assert src._parse_kline_zip(no_header) == [(1577865599999, Decimal("9050.5"))]
+    assert src._parse_kline_zip(no_header) == expected
 
     with_header = tmp_path / "k2.zip"
     _make_kline_zip(with_header, [header, data_row])
-    assert src._parse_kline_zip(with_header) == [(1577865599999, Decimal("9050.5"))]
+    assert src._parse_kline_zip(with_header) == expected
 
 
 def _funding_zip(month: str, rows: list[str]) -> tuple[bytes, bytes]:

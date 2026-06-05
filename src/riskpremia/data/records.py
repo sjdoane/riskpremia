@@ -123,6 +123,24 @@ class MarkPriceRecord:
 
 
 @attrs.frozen(slots=True)
+class SpotKlineRecord:
+    """A spot kline carrying the close and the quote-asset (USD) dollar volume (ADR 0005).
+
+    The CTREND universe layer (Study 3) reads DAILY spot bars to compute the daily
+    technical signals (PR2) and to derive the weekly liquidity rank + returns (PR1).
+    `close` is the bar close; `quote_volume` is the Binance kline "quote asset volume"
+    (column 7), i.e. the USD(T)-denominated dollar volume directly, with no
+    price * base-volume reconstruction. Decimal at the boundary; the single documented
+    Float64 cast happens later at the panel build (mirroring `clock.py`).
+    """
+
+    instrument: InstrumentId
+    period_end_ts: datetime
+    close: Decimal
+    quote_volume: Decimal
+
+
+@attrs.frozen(slots=True)
 class SpotPriceRecord:
     """A spot reference close for the delta-neutral leg and the basis.
 
