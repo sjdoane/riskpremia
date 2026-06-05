@@ -20,10 +20,13 @@ from riskpremia.data.records import InstrumentId, SpotKlineRecord
 
 
 def _rec(symbol: str, day: int, close: str, vol: str) -> SpotKlineRecord:
+    c = Decimal(close)
     return SpotKlineRecord(
         instrument=InstrumentId.of("binance_vision", symbol),
         period_end_ts=datetime(2024, 1, day, tzinfo=UTC),
-        close=Decimal(close),
+        close=c,
+        high=c,  # degenerate bar (high=low=close) keeps the OHLC guard satisfied
+        low=c,
         quote_volume=Decimal(vol),
     )
 
@@ -66,7 +69,8 @@ def test_trailing_zeros_are_stripped_losslessly(tmp_path: Path) -> None:
     path = tmp_path / "panel.csv"
     write_daily_panel_csv(path, [_rec("BTCUSDT", 1, "4.83900000", "343688450.68410000")])
     text = path.read_text()
-    assert "BTCUSDT,4.839,343688450.6841\n" in text  # trailing zeros gone
+    # close, high, low (all 4.839 for this degenerate bar), then the dollar volume
+    assert "BTCUSDT,4.839,4.839,4.839,343688450.6841\n" in text  # trailing zeros gone
     assert "4.83900000" not in text
     # lossless: the stripped value reads back to the identical float
     assert read_daily_panel(path)["close"].item() == float(Decimal("4.83900000"))
@@ -77,7 +81,7 @@ def test_written_bytes_are_lf_only(tmp_path: Path) -> None:
     write_daily_panel_csv(path, [_rec("BTCUSDT", 1, "100", "5")])
     raw = path.read_bytes()
     assert b"\r" not in raw  # LF only (cross-platform SHA stability)
-    assert raw.startswith(b"date,symbol,close,dollar_volume\n")
+    assert raw.startswith(b"date,symbol,close,high,low,dollar_volume\n")
 
 
 def test_write_rejects_bad_records(tmp_path: Path) -> None:
@@ -97,6 +101,8 @@ def test_read_rejects_bad_header_and_corrupt_close(tmp_path: Path) -> None:
         read_daily_panel(bad_header)
     # a tampered close (non-positive) is caught on read via build_daily_panel's guard
     corrupt = tmp_path / "corrupt.csv"
-    corrupt.write_text("date,symbol,close,dollar_volume\n2024-01-01,BTCUSDT,0,5\n", newline="\n")
+    corrupt.write_text(
+        "date,symbol,close,high,low,dollar_volume\n2024-01-01,BTCUSDT,0,0,0,5\n", newline="\n"
+    )
     with pytest.raises(CtrendError):
         read_daily_panel(corrupt)

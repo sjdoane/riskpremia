@@ -159,6 +159,8 @@ _DAILY_SCHEMA = {
     "date": pl.Date,
     "symbol": pl.Utf8,
     "close": pl.Float64,
+    "high": pl.Float64,
+    "low": pl.Float64,
     "dollar_volume": pl.Float64,
 }
 
@@ -175,11 +177,12 @@ def _min_float(frame: pl.DataFrame, column: str) -> float | None:
 
 
 def build_daily_panel(records: Sequence[SpotKlineRecord]) -> pl.DataFrame:
-    """Assemble the canonical daily panel `(date, symbol, close, dollar_volume)`.
+    """Assemble the canonical daily panel `(date, symbol, close, high, low, dollar_volume)`.
 
     The single documented Decimal -> Float64 cast site. Deduped on `(date, symbol)`
     (keeping the last, a benign re-publish), sorted by `(symbol, date)`. Raises on a
-    non-positive close or a negative dollar volume (corrupt data).
+    non-positive low/close, a negative dollar volume, or an inconsistent OHLC bar
+    (high < low, or the close outside [low, high]) (corrupt data).
     """
     if len(records) == 0:
         raise CtrendError("build_daily_panel requires at least one record")
@@ -188,16 +191,33 @@ def build_daily_panel(records: Sequence[SpotKlineRecord]) -> pl.DataFrame:
             "date": [r.period_end_ts.date() for r in records],
             "symbol": [r.instrument.symbol for r in records],
             "close": [float(r.close) for r in records],
+            "high": [float(r.high) for r in records],
+            "low": [float(r.low) for r in records],
             "dollar_volume": [float(r.quote_volume) for r in records],
         },
         schema=_DAILY_SCHEMA,
     )
+    min_low = _min_float(frame, "low")
+    if min_low is not None and min_low <= 0.0:
+        raise CtrendError(f"build_daily_panel got a non-positive low ({min_low})")
     min_close = _min_float(frame, "close")
     if min_close is not None and min_close <= 0.0:
         raise CtrendError(f"build_daily_panel got a non-positive close ({min_close})")
     min_vol = _min_float(frame, "dollar_volume")
     if min_vol is not None and min_vol < 0.0:
         raise CtrendError(f"build_daily_panel got a negative dollar_volume ({min_vol})")
+    bad = frame.filter(
+        (pl.col("high") < pl.col("low"))
+        | (pl.col("close") > pl.col("high"))
+        | (pl.col("close") < pl.col("low"))
+    )
+    if bad.height > 0:
+        row = bad.row(0, named=True)
+        raise CtrendError(
+            f"build_daily_panel got an inconsistent OHLC bar (close not in [low, high] or "
+            f"high < low): {row['symbol']} {row['date']} "
+            f"close={row['close']} high={row['high']} low={row['low']}"
+        )
     return (
         frame.unique(subset=["date", "symbol"], keep="last", maintain_order=True)
         .sort(["symbol", "date"])

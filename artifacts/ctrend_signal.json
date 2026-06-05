@@ -1,0 +1,100 @@
+{
+  "caveats": [
+    "This is the GROSS signal quality (a point-in-time cross-sectional rank IC + a monotonic quintile spread), the necessary-not-sufficient measurement. It is NOT a Sharpe and says nothing about net-of-cost survival; the kill gate (realistic costs + event-time-purged CPCV + the trial-registry DSR deflation) is PR3.",
+    "The quintile spread is the EQUAL-WEIGHT mean forward return per quintile (pre-cost), NOT the paper's value-weighted net portfolio return; the magnitudes are not directly comparable to the paper's headline.",
+    "Deviations from the paper (each a PR3 trial-registry entry): equal-weight OLS (no market cap on Binance, so no value-weighted SSR); raw weekly returns (the cross-sectional intercept absorbs the common risk-free rate); the dollar-volume liquid universe; the canonical indicator conventions where the paper's Appendix A was unobtainable.",
+    "Point-in-time: the forecast at week t uses only data realized at or before t-1 (the FM smoothing window and the elastic-net pool both end at t-1), so the IC is a genuine out-of-fit cross-sectional rank correlation, not an in-sample fit statistic.",
+    "The IC is REGIME-DEPENDENT and not temporally stable: it was significantly NEGATIVE in 2021 (the trend factor inverted) and the positive out-of-sample headline is dominated by the 2025-2026 regime (see ic_by_year). The aggregate IC reflects the regime mix of the window; the PR3 kill gate (the trial-registry DSR deflation under CPCV) must account for this non-stationarity, and the long-only top quintile loses gross in the 2022+ bear market even though the long-short spread is positive."
+  ],
+  "currency_quote": "USDT",
+  "fingerprint": {
+    "n_panel_rows": 721954,
+    "panel_relpath": "tests/data/ctrend_daily_panel_usdt.csv.gz",
+    "panel_sha256": "e4c84034b1e79503ae3d82083d1e9e88ea9233ea065e0793f1c5fb85a0dc72d0"
+  },
+  "full_sample": {
+    "frac_positive": 0.5672268907563025,
+    "ic_t_stat": 2.772570886905864,
+    "mean_ic": 0.032191049215932487,
+    "n_weeks": 238,
+    "quintile_means": [
+      -0.001400954015108895,
+      0.0048694889801099,
+      0.00766649558940196,
+      0.009932590520282477,
+      0.014367773719328646
+    ],
+    "quintile_spread": 0.015768727734437542
+  },
+  "ic_by_year": [
+    {
+      "ic_t_stat": 1.1616091733877385,
+      "mean_ic": 0.05037069335290135,
+      "n_weeks": 19,
+      "year": 2020
+    },
+    {
+      "ic_t_stat": -3.2696506228629603,
+      "mean_ic": -0.07233037118468519,
+      "n_weeks": 52,
+      "year": 2021
+    },
+    {
+      "ic_t_stat": -0.750893658264206,
+      "mean_ic": -0.015336398120319372,
+      "n_weeks": 46,
+      "year": 2022
+    },
+    {
+      "ic_t_stat": 1.9463847146802402,
+      "mean_ic": 0.07200837732395561,
+      "n_weeks": 19,
+      "year": 2023
+    },
+    {
+      "ic_t_stat": -0.5231333643793282,
+      "mean_ic": -0.014539789394764113,
+      "n_weeks": 32,
+      "year": 2024
+    },
+    {
+      "ic_t_stat": 5.851478015649276,
+      "mean_ic": 0.14418026956763205,
+      "n_weeks": 49,
+      "year": 2025
+    },
+    {
+      "ic_t_stat": 5.741334002458743,
+      "mean_ic": 0.15254100178516436,
+      "n_weeks": 21,
+      "year": 2026
+    }
+  ],
+  "knobs": {
+    "fit_window": 52,
+    "l1_ratio": 0.5,
+    "lookback_weeks": 4,
+    "min_history_weeks": 8,
+    "n_quintiles": 5,
+    "top_n": 100
+  },
+  "oos_start": "2022-01-01",
+  "out_of_sample": {
+    "frac_positive": 0.6227544910179641,
+    "ic_t_stat": 4.725792139654378,
+    "mean_ic": 0.06266829845084093,
+    "n_weeks": 167,
+    "quintile_means": [
+      -0.014009766698510345,
+      -0.00625810681769983,
+      -0.006701525342183808,
+      -0.007589365068113426,
+      -0.003691916497477433
+    ],
+    "quintile_spread": 0.010317850201032912
+  },
+  "schema_version": 1,
+  "study": "crypto cross-sectional trend factor (CTREND, Study 3): the fitted signal (gross quality)",
+  "window_end": "2026-05-24",
+  "window_start": "2020-08-02"
+}

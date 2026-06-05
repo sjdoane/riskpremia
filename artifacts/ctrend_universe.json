@@ -1077,7 +1077,7 @@
   "fingerprint": {
     "n_panel_rows": 721954,
     "panel_relpath": "tests/data/ctrend_daily_panel_usdt.csv.gz",
-    "panel_sha256": "311084b10cfa7dfafa87a0003745ae5f727cedde5f2e4d69302f27358457b908"
+    "panel_sha256": "e4c84034b1e79503ae3d82083d1e9e88ea9233ea065e0793f1c5fb85a0dc72d0"
   },
   "interval": "1d",
   "lookback_weeks": 4,
