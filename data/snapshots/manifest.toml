@@ -56,9 +56,9 @@ instrument = "USDT spot universe (563 coins)"
 kind = "reproducibility_fixture"
 relpath = "tests/data/ctrend_daily_panel_usdt.csv.gz"
 source_url = "https://data.binance.vision/data/spot/monthly/klines/<SYMBOL>/1d/ (close=col4, quote_volume=col7)"
-fetched_utc = 2026-06-05T07:02:52+00:00
-sha256 = "3e0b366fcb63d70029b0c4cb5f51e220f323fa74cd552b778fcff66ac35055ca"
-size_bytes = 9631162
+fetched_utc = 2026-06-05T09:15:26+00:00
+sha256 = "f4eb763a1c5632da3cd484254d4bb662bbf60564a3bb81c63f70dfd7eded43c3"
+size_bytes = 13389406
 rows = 721954
 note = "Committed in-repo reproducibility fixture (gzipped CSV date,symbol,close,dollar_volume): the delisting-complete USDT daily panel TRIMMED to the coins ever in the top-N_MAX liquid set. This sha256 is the committed .gz blob's FILE hash (tamper-evidence of the committed bytes); the artifact fingerprint pins the decompressed-CONTENT hash (the cross-platform integrity check). The raw monthly zips carry their own published checksums. Regenerate via scripts/build_ctrend_universe.py."
 

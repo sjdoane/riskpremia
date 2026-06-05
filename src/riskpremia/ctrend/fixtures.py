@@ -39,7 +39,7 @@ from riskpremia.ctrend.errors import CtrendError
 from riskpremia.ctrend.universe import build_daily_panel
 from riskpremia.data.records import InstrumentId, SpotKlineRecord
 
-_DAILY_HEADER: tuple[str, ...] = ("date", "symbol", "close", "dollar_volume")
+_DAILY_HEADER: tuple[str, ...] = ("date", "symbol", "close", "high", "low", "dollar_volume")
 
 
 def _fmt_decimal(value: Decimal) -> str:
@@ -62,9 +62,16 @@ def _daily_panel_csv_text(records: Sequence[SpotKlineRecord]) -> str:
         raise CtrendError("the daily panel requires at least one record")
     deduped: dict[tuple[str, date], SpotKlineRecord] = {}
     for rec in records:
+        if rec.low <= 0:
+            raise CtrendError(f"low must be positive; got {rec.low} for {rec.instrument.symbol}")
         if rec.close <= 0:
             raise CtrendError(
                 f"close must be positive; got {rec.close} for {rec.instrument.symbol}"
+            )
+        if rec.high < rec.low or rec.close > rec.high or rec.close < rec.low:
+            raise CtrendError(
+                f"inconsistent OHLC for {rec.instrument.symbol}: close={rec.close} "
+                f"high={rec.high} low={rec.low}"
             )
         if rec.quote_volume < 0:
             raise CtrendError(
@@ -77,7 +84,14 @@ def _daily_panel_csv_text(records: Sequence[SpotKlineRecord]) -> str:
     writer.writerow(_DAILY_HEADER)
     for (symbol, d), rec in rows:
         writer.writerow(
-            [d.isoformat(), symbol, _fmt_decimal(rec.close), _fmt_decimal(rec.quote_volume)]
+            [
+                d.isoformat(),
+                symbol,
+                _fmt_decimal(rec.close),
+                _fmt_decimal(rec.high),
+                _fmt_decimal(rec.low),
+                _fmt_decimal(rec.quote_volume),
+            ]
         )
     return buf.getvalue()
 
@@ -133,7 +147,9 @@ def read_daily_panel_records(path: Path) -> list[SpotKlineRecord]:
                 instrument=InstrumentId.of("binance_vision", r[1]),
                 period_end_ts=datetime(d.year, d.month, d.day, tzinfo=UTC),
                 close=Decimal(r[2]),
-                quote_volume=Decimal(r[3]),
+                high=Decimal(r[3]),
+                low=Decimal(r[4]),
+                quote_volume=Decimal(r[5]),
             )
         )
     return out

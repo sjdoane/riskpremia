@@ -26,6 +26,16 @@ dependencies = [
     # ZoneInfoNotFoundError). The event clock is always UTC, so the tz-rule
     # version is immaterial to results; pinned for reproducibility regardless.
     "tzdata==2026.2",
+    # The CTREND fitted signal (Study 3, PR2) uses scikit-learn's ElasticNet for the
+    # cross-sectional combined elastic-net SELECTION step (the gate-critical eq-10 of
+    # Fieberg et al. 2025). A battle-tested deterministic solver is used on the
+    # gate-critical path rather than bespoke numerics; pinned (with its transitive
+    # scipy/joblib/threadpoolctl) for reproducibility. This is the fitted-signal layer's
+    # dependency; the data layer + the vendored analytics stay stdlib-only / numpy-only.
+    "scikit-learn==1.5.2",
+    "scipy==1.17.1",
+    "joblib==1.5.3",
+    "threadpoolctl==3.6.0",
 ]
 
 [project.optional-dependencies]
@@ -79,6 +89,14 @@ warn_unreachable = true
 # whenever the figures extra is absent. Ignoring its missing imports keeps
 # `mypy src/riskpremia` green regardless of whether the plotting dep is present.
 module = ["matplotlib.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+# scikit-learn / scipy ship only partial type information; ignore their missing
+# imports so the strict gate stays clean. The signal layer narrows their numeric
+# returns to float at the single point of use (the codebase's documented-cast
+# discipline), so no untyped value escapes into the typed surface.
+module = ["sklearn.*", "scipy.*"]
 ignore_missing_imports = true
 
 [tool.pydantic-mypy]

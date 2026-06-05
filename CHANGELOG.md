@@ -3,6 +3,115 @@
 What shipped, plus every review finding and its resolution (rule 2). Newest
 first. This is the audit trail; STATUS.md is the current-state snapshot.
 
+## 2026-06-05, session 6 (CTREND PR2): the fitted signal (the 28 features + the CS-C-ENet)
+
+The first FITTED model in the project: a faithful replication of the CTREND cross-sectional
+combined elastic-net (Fieberg et al., JFQA 2025), fit strictly point-in-time, producing
+per-(week, coin) forecasts + quintiles. The paper's exact method was verified first (the 28
+daily signals in Section III.B, the eq 3-11 CS-C-ENet protocol in Section III.C). Shipped on
+`feat/ctrend-signal`:
+
+- `ctrend/features.py`: the 28 DAILY technical signals (5 momentum: rsi/stochK/stochD/
+  stochRSI/cci; 9 price MA: 7 SMAs + macd + macd_diff_signal; 10 volume: 7 volume-SMAs +
+  volmacd + volmacd_diff_signal + chaikin; 4 Bollinger), computed on the daily panel per coin
+  (polars rolling/EWM, strictly backward) and sampled at each weekly rebalance date.
+- `ctrend/signal.py`: the CS-C-ENet. The cross-sectional rank-to-[-0.5,0.5] transform; the
+  per-signal univariate Fama-MacBeth with 52-week coefficient smoothing (eq 7-8); the
+  elastic-net SELECTION (eq 10, scikit-learn, mix 0.5, in-repo AICc lambda); the CTREND
+  forecast = the equal-weight average of the positive-weight survivors (eq 11); the rolling
+  PIT driver, the quintile sort, and the gross rank-IC + quintile-spread exhibits.
+- `ctrend/signal_artifact.py` + `scripts/build_ctrend_signal.py`: the committed gross-quality
+  artifact (`artifacts/ctrend_signal.json`: the full + OOS rank IC, the quintile spread, the
+  per-year IC regime diagnostic, the fingerprint, the caveats) + its offline reproduction
+  test, built from the committed panel (no network; the forecast series is recomputed, not
+  committed, the VRP/PR1 discipline).
+- Data-layer extension (prerequisite, revealed by the exact feature list): 4 signals (stochK,
+  stochD, cci, chaikin) need daily HIGH/LOW, so `SpotKlineRecord` + `_parse_kline_zip` (now a
+  5-tuple) + `build_daily_panel` (+ OHLC guards) + the fixtures gained high/low and the
+  committed panel was rebuilt (the PR1 eligibility is byte-identical; only the panel SHA +
+  artifact + manifest refreshed). `scikit-learn==1.5.2` (+ scipy/joblib/threadpoolctl) pinned.
+
+**The gross result (real data, 563 coins, 238 scored weeks 2020-08..2026-05): the signal
+predicts the cross-section at the GROSS level.** Point-in-time cross-sectional rank IC 0.032
+(t 2.77) full-sample, 0.063 (t 4.73) on the held-out 2022+ window; monotonic full-sample
+quintiles; +1.6%/week gross top-minus-bottom. Two honest caveats the post-implementation
+review surfaced and the artifact carries: (1) the IC is REGIME-DEPENDENT, not a stable edge,
+significantly NEGATIVE in 2021 (-0.07, t -3.3, the trend factor inverted) and strongly
+positive only in 2025-2026 (+0.14/+0.15, t ~5.8), so the OOS headline aggregates a favorable
+recent regime mix; (2) the 2022+ quintile means are all NEGATIVE (bear market) but positively
+sloped, so the long-short spread is positive (+1.0%/week gross) while the retail-realistic
+LONG-ONLY top quintile loses gross (-0.4%/week) before costs (the central PR3 tension, ADR
+0005 caveat 5). This is GROSS, necessary-not-sufficient; the net-of-cost kill gate is PR3.
+
+Deviations (documented, each a PR3 trial-registry knob): equal-weight OLS (no market cap on
+Binance, so no value-weighted SSR); raw weekly returns (the cross-sectional intercept absorbs
+the common risk-free rate); the canonical indicator conventions where the paper's
+Supplementary Material Appendix A was unobtainable (the design review's C1). Full design in
+docs/research/0003-ctrend-signal-design.md. 213 offline + 16 network tests; mypy --strict (53
+files); ruff; em-dash clean.
+
+#### Design review (APPROVE-WITH-CHANGES, 1 Critical + 6 High + 6 Medium + 4 Low, all resolved)
+
+The independent senior-quant design review grounded itself in the paper PDF + the code.
+
+- **C1 [resolved-with-caveat]:** the 28 formulas were textbook reconstructions, not verified
+  against the paper's Supplementary Material Appendix A (a separate, unobtainable file: SSRN
+  login-walled, the Cambridge supplement + the Corvinus mirror unreachable). Resolved per the
+  reviewer's sanctioned fallback: the paper STATES the load-bearing parameters (the SMA set,
+  14-day RSI/stochastics, 12/26/9 MACD, 20-day/2-std Bollinger, the StochRSI prose), and the
+  canonical practitioner defaults (Wilder RSI, 20-day CCI on the typical price + 0.015, 20-day
+  Chaikin, EMA adjust=False) are used + documented for the unstated few, each a PR3 robustness
+  knob; obtaining Appendix A is a tracked follow-up.
+- **H1 [fixed]:** the rank transform is `(rank-1)/(N-1)-0.5` (the closed-interval KPS/GKX), with
+  average-rank ties + an N<2 no-regression rule. **H2 [fixed]:** the AICc df is
+  `nnz + intercept + sigma^2` (the reviewer's correction), with #nonzero-as-elastic-net-df
+  documented as the standard approximation. **H3 [fixed]:** the FM smoothing window AND the
+  elastic-net pool both end at week t-1 (never t, whose forward return is the target); the
+  exact week-index pairing (z(W_m), forward_return(W_m)) is documented + pinned by a
+  no-look-ahead test. **H4 [adopted]:** the gate-critical elastic-net uses scikit-learn
+  (pinned, `selection='cyclic'`, post-fit theta>0), not bespoke numerics, with the AICc in-repo.
+  **H5 [fixed]:** the raw-return-vs-excess-return deviation is documented (rank-innocuous via
+  the cross-sectional intercept). **H6 [fixed]:** missing-signal handling specified at all three
+  stages (univariate exclusion + N<2 floor; the eq-11 average over only the coin's non-null
+  selected forecasts, a coin with none dropped not zeroed; the eq-10 complete-case pool).
+- **M1 [fixed]:** Wilder RSI (alpha 1/period) + EMA adjust=False + min_samples=span +
+  ignore_nulls, validated against an independent computation; the first (null) delta is kept
+  null so the EWM seeds at the first real move (the cleaner seeding, caught by the feature
+  test). **M2 [fixed]:** equal-weight applied consistently to eq-7 + eq-10, the deviation
+  documented; the dollar-volume-weighted variant is a deferred PR3 knob (the liquid universe
+  mitigates the concern). **M3 [fixed]:** the deliverable is the summary + fingerprint (the
+  forecast series recomputed by PR3); the IC is the PIT cross-sectional rank IC on post-burn-in
+  weeks; the gross-necessary-not-sufficient caveat is carried. **M4 [fixed]:** the panel-extension
+  blast radius (the schema constant, the reader offsets, the 4-to-6-column tests, the rebuilt
+  artifact/manifest) all updated. **M5 [done]:** confirmed only high/low needed (no OPEN); Chaikin
+  uses the dollar-volume convention (documented). **M6 [fixed]:** Bollinger std ddof=0.
+- **L1-L4 [fixed]:** quintile remainder-front + symbol tie-break; `naive_effective_n` semantics
+  pinned (PR2 documents the trial family, PR3 records); `min_samples` (not the deprecated
+  `min_periods`); the `Any`-narrowing + the sklearn/scipy mypy override + a ConvergenceWarning
+  guard under filterwarnings=error.
+
+#### Post-implementation review (SHIP, 0 Critical/High, 2 Medium, 2 Low; reproduced from first principles)
+
+The reviewer reproduced every committed number bit-for-bit (full IC 0.032191049215932487
+exact, OOS 0.06266829845084093 exact, 238 weeks) and CERTIFIED no look-ahead by three
+independent adversarial tests, including a surgical test perturbing ONLY `forward_return(W*)`
+by +100 and confirming the week-W* forecast changes by exactly 0.0 (ruling out the m=t
+off-by-one). It re-derived all 28 indicators against a third independent implementation (0
+mismatches on synthetic + ~16k real BTC values), confirmed the eq-11 equal-weight-of-selected
+faithfulness, and confirmed the elastic-net abstention does NOT bias the IC (a neutral
+counterfactual on the 67 no-select weeks gives ~the same IC). Resolved:
+
+- **Medium-1 [fixed]:** the OOS IC is not temporally stable (significantly negative in 2021),
+  which was not disclosed. Resolved by adding the per-year `ic_by_year` block to the artifact +
+  a regime-instability caveat + a reproduction-test assertion that the IC is not uniformly
+  positive; the regime non-stationarity is now an explicit input to the PR3 gate.
+- **Medium-2 [accepted]:** the reproduction IC tolerance (5e-3) is loose vs the ~1e-15 same-
+  platform variation; kept for cross-platform (Linux CI) elastic-net-selection robustness, with
+  the exact `n_weeks` match as the structural-regression guard.
+- **Low-1/Low-2 [accepted]:** the quintile remainder is bottom-loaded (documented, immaterial
+  at N~100); the smoothing re-indexing is the correct PIT translation of the paper (confirmed
+  faithful, the doc already explains it).
+
 ## 2026-06-04, session 5 (CTREND PR1): the point-in-time, delisting-complete universe data layer
 
 The data foundation for Study 3 (the CTREND crypto cross-sectional trend factor, ADR 0005).

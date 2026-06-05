@@ -30,11 +30,21 @@ from riskpremia.ctrend.universe import (
 from riskpremia.data.records import InstrumentId, SpotKlineRecord
 
 
-def _rec(symbol: str, d: date, close: float, volume: float) -> SpotKlineRecord:
+def _rec(
+    symbol: str,
+    d: date,
+    close: float,
+    volume: float,
+    high: float | None = None,
+    low: float | None = None,
+) -> SpotKlineRecord:
+    c = Decimal(str(close))
     return SpotKlineRecord(
         instrument=InstrumentId.of("binance_vision", symbol),
         period_end_ts=datetime(d.year, d.month, d.day, tzinfo=UTC),
-        close=Decimal(str(close)),
+        close=c,
+        high=c if high is None else Decimal(str(high)),
+        low=c if low is None else Decimal(str(low)),
         quote_volume=Decimal(str(volume)),
     )
 
@@ -128,7 +138,7 @@ def test_build_daily_panel_dedup_sort_and_guards() -> None:
         _rec("BTCUSDT", date(2024, 1, 2), 101.0, 6.0),  # a (date,symbol) duplicate; keep last
     ]
     panel = build_daily_panel(recs)
-    assert panel.columns == ["date", "symbol", "close", "dollar_volume"]
+    assert panel.columns == ["date", "symbol", "close", "high", "low", "dollar_volume"]
     assert panel["symbol"].to_list() == ["AAAUSDT", "BTCUSDT", "BTCUSDT"]  # sorted (symbol, date)
     btc_jan2 = panel.filter((pl.col("symbol") == "BTCUSDT") & (pl.col("date") == date(2024, 1, 2)))
     assert btc_jan2["close"].item() == 101.0  # the last duplicate won
@@ -137,6 +147,10 @@ def test_build_daily_panel_dedup_sort_and_guards() -> None:
         build_daily_panel([_rec("BTCUSDT", date(2024, 1, 1), 0.0, 1.0)])  # non-positive close
     with pytest.raises(CtrendError):
         build_daily_panel([_rec("BTCUSDT", date(2024, 1, 1), 1.0, -1.0)])  # negative volume
+    with pytest.raises(CtrendError):  # high < low (inconsistent OHLC)
+        build_daily_panel([_rec("BTCUSDT", date(2024, 1, 1), 10.0, 1.0, high=9.0, low=11.0)])
+    with pytest.raises(CtrendError):  # close above high
+        build_daily_panel([_rec("BTCUSDT", date(2024, 1, 1), 10.0, 1.0, high=9.5, low=8.0)])
 
 
 # ----- the weekly resample + returns -----------------------------------------
