@@ -27,11 +27,14 @@ of candidate premia:
    the exact free historical CME settlement path is not robust enough for a deployable
    futures backtest and USD 10,000 integer-contract stress can fail account survival
    ([ADR 0007](docs/decisions/0007-kill-cme-micro-g6-fx-carry.md)).
-6. **Cross-asset defensive trend** (Study 6): a frozen, no-fit, long-only trend rule across
-   genuinely low-correlated asset classes (US equity, long-term US Treasury, gold) on
-   openly-redistributable public-domain data, scored in excess of the Treasury bill. Selected
-   and pre-registered after a four-lens fork as the deployable swing that repairs Study 4's
-   weakness with integrity; build and verdict pending
+6. **Cross-asset defensive trend** (Study 6): a frozen, no-fit, long-only stock/bond trend
+   rule into Treasury bills, on openly-redistributable public-domain data (Kenneth French
+   factors and the US Treasury par yield curve), scored in excess of the bill. **The first
+   result to clear the deflated full-sample gate: a qualified pass.** Full-sample conditional
+   PSR(0) 0.9996 (monthly 0.9970, Deflated Sharpe 0.998 at 32 trials), 11.2% max drawdown,
+   2.8% cost share, but regime-dependent (CPCV worst fold 0.72, 2022-onward recency 0.40, with
+   the equity sleeve carrying the result and the long-Treasury sleeve the weak part). A classic
+   rule validated with full rigor, not a novel edge
    ([ADR 0008](docs/decisions/0008-pivot-to-cross-asset-defensive-trend.md)).
 
 Sibling to [pit-backtest](https://github.com/sjdoane/pit-backtest), whose headline was a
@@ -40,11 +43,13 @@ confound controls, a pre-registered kill criterion, and reproducibility, never a
 backtest. An honest null is a success; a blown-up account or an oversold backtest is a
 failure.
 
-> **Status (2026-06-06):** Studies 1, 2 tradeable layer, 3, and 4 are honest nulls.
-> Study 2's measurement layer remains a positive finding. Study 5, the CME Micro G6 FX
-> carry feasibility pass, was killed before implementation. Study 6, a cross-asset
-> defensive trend on public-domain data, is selected and pre-registered ([ADR 0008](docs/decisions/0008-pivot-to-cross-asset-defensive-trend.md));
-> the build and verdict follow. Live state is always in [STATUS.md](STATUS.md).
+> **Status (2026-06-06):** Studies 1, 2 tradeable layer, 3, and 4 are honest nulls, and
+> Study 5 was a feasibility kill. Study 2's measurement layer remains a positive finding.
+> Study 6, a cross-asset defensive trend on public-domain data, is the first result to clear
+> the deflated full-sample gate: a qualified, regime-dependent pass
+> ([ADR 0008](docs/decisions/0008-pivot-to-cross-asset-defensive-trend.md)). The same gate
+> that rejected five candidates also accepts on the merits. Live state is always in
+> [STATUS.md](STATUS.md).
 
 ## Study 2 result: the BTC variance risk premium
 

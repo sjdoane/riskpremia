@@ -113,3 +113,29 @@ sha256 = "4a144a949756903dbdd2300436b2f7710c8c1119f7e5c95e440eb2c5a4f67236"
 size_bytes = 6113
 rows = 42
 note = "Committed in-repo reproducibility fixture: the selected monthly short-straddle entry quotes for the Layer-ii gate; the realized expiry underlying is looked up from the committed spot fixture by expiry date."
+
+[[snapshot]]
+name = "xtrend-panel"
+venue = "public_domain"
+instrument = "US-equity-TR,1m-bill,UST-10Y-par-yield"
+kind = "reproducibility_fixture"
+relpath = "tests/data/xtrend_panel.csv"
+source_url = "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Research_Data_Factors_daily_CSV.zip and https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv (daily_treasury_yield_curve, 10 Yr column)"
+fetched_utc = 2026-06-06T22:40:53+00:00
+sha256 = "c66cab0e84b4c1f05a58b884f3a309a1a3917fecb6c903be45e3244a3b4397c2"
+size_bytes = 275158
+rows = 9053
+note = "Committed cross-asset trend daily panel for Study 6: US equity total return and the one-month bill rate from the Kenneth French daily factors, and the US Treasury ten-year par yield, aligned on their common trading days from 1990. As-of snapshot; the SHA256 attests tamper-evidence of the committed series, not vendor byte-fidelity."
+
+[[snapshot]]
+name = "xtrend-panel-sources"
+venue = "public_domain"
+instrument = "US-equity-TR,1m-bill,UST-10Y-par-yield"
+kind = "reproducibility_fixture"
+relpath = "tests/data/xtrend_panel_sources.json"
+source_url = "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Research_Data_Factors_daily_CSV.zip and https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv (daily_treasury_yield_curve, 10 Yr column)"
+fetched_utc = 2026-06-06T22:40:53+00:00
+sha256 = "35ef8017e9aaa9de6f9acb27850644f92dc3c3630c5007afbd52f5f75b8229b3"
+size_bytes = 378
+rows = 1
+note = "Committed provenance for tests/data/xtrend_panel.csv: the Kenneth French zip URL and hash, the Treasury par-yield year range, and the fetch date."
