@@ -4,7 +4,9 @@ Single source of truth for where Project RiskPremia is and what is deferred.
 Read this FIRST on any new session, then the ADRs it points to. Update after
 every meaningful work block (rule 2).
 
-Last updated: 2026-06-06 (session 9: Study 4 PR6a BTC/ETH slow trend gate built and killed. The rule is positive and drawdown-reducing, but CPCV stress minimum conditional PSR(0) is 0.1439, below the 0.95 bar. Next registered backup after this PR is G10 Micro FX carry, starting with a free-data and stress-loss gate).
+Last updated: 2026-06-06 (session 10: Study 5 CME Micro G6 FX carry feasibility killed before implementation. The registered G10 Micro FX backup is not actually G10 at micro size, the exact free CME settlement-history path is not robust enough for a deployable futures backtest, and CHF-style integer micro sizing can plausibly break a USD 10,000 account).
+
+**Study 5 (CME Micro G6 FX carry feasibility, ADR 0007): DONE, NON-VIABLE BEFORE IMPLEMENTATION.** The G10 Micro FX backup from ADR 0006 was tested as a pre-code feasibility gate, not a backtest. The honest tradeable scope is CME Micro G6, not G10: micro contracts cover AUD, CAD, CHF, EUR, GBP, and JPY versus USD, while NZD, NOK, and SEK are missing at micro size. The data lane found free spot FX, policy-rate, VIX, and CFTC positioning paths, but the exact free historical CME settlement path is not robust enough for a long-history, scriptable futures backtest; CME routes historical settlement products through DataMine and local direct TCF CSV fetches returned HTTP 403. The stress lane also failed: one short `MSF` loses about USD 2,438 in the January 2015 CHF shock; two to three short CHF funding legs can plausibly hit 49% to 73% of a USD 10,000 account before slippage or liquidation friction. **Verdict:** kill CME Micro G6 FX carry as a deployable RiskPremia strategy before code. A spot-plus-policy-rate FX carry measurement note remains possible, but it is not a tradeable CME Micro verdict. Next step: fresh strategy fork with data and minimum-size stress gates applied before implementation.
 
 **Study 4 (BTC/ETH slow trend, ADR 0006): DONE, NON-VIABLE.** PR6a `btc_eth_trend_gate` tested the frozen weekly BTC/ETH spot-only trend rule selected after the CTREND null: strict 200-day moving-average signal, Sunday close signal formation, Monday open fill, next Monday open exit, equal-risk active assets, 25% annualized volatility target, 100% notional cap, zero-yield cash, and realistic Kraken spot costs. The 2022+ out-of-sample result is positive but fails the statistical gate: 229 weekly observations, mean net +0.1975%/week, full-window conditional PSR(0) 0.6970, CPCV stress minimum conditional PSR(0) 0.1439, daily max drawdown 26.65%, cost share 11.47%, compounded net gain 43.91%, CAGR 8.64%. **Verdict:** non-viable because CPCV stress PSR 0.144 is below the 0.95 bar. The committed artifact is `artifacts/btc_eth_trend_gate.json`; method note is `docs/research/0005-btc-eth-trend-gate-design.md`. Registered backup: G10 Micro FX carry with a hard risk-off switch, subject first to a free-data and stress-loss gate.
 
@@ -27,8 +29,10 @@ ADR 0005) found real gross cross-sectional signal quality, but the retail long-o
 top quintile was non-viable after costs and the academic long-short comparison also
 failed the conservative CPCV-min DSR gate. Study 4 (BTC/ETH slow trend, ADR 0006)
 was positive and drawdown-reducing but non-viable because its CPCV stress minimum
-conditional PSR(0) was 0.1439, below the 0.95 bar. **Next registered backup: G10 Micro
-FX carry with a hard risk-off switch**, subject first to a free-data and stress-loss gate.
+conditional PSR(0) was 0.1439, below the 0.95 bar. Study 5 (CME Micro G6 FX carry,
+ADR 0007) was killed at feasibility because the exact free futures-settlement data path
+and USD 10,000 integer-contract stress gate failed. **Next step: fresh strategy fork
+before any new implementation.**
 Repo: https://github.com/sjdoane/riskpremia.
 
 ## Dev commands (Windows PowerShell; the venv is run DIRECTLY)
@@ -234,7 +238,7 @@ ADR 0001 (lead-track decision + the kill criterion), ADR 0002 (the data layer +
 funding clock, incl the PR3 OKX/delta amendment), ADR 0003 (the cost model + null),
 ADR 0004 (VRP pivot + completed non-viable tradeable gate), ADR 0005 (CTREND pivot +
 completed non-viable gate), ADR 0006 (completed BTC/ETH slow-trend pivot +
-non-viable PR6a gate).
+non-viable PR6a gate), ADR 0007 (completed CME Micro G6 FX carry feasibility kill).
 `docs/research/0001-data-layer-design.md` (the reviewed data-layer design).
 CHANGELOG.md (every review finding + resolution). The `project_riskpremia` memory
 note (cross-session summary). README.md (the reviewer-facing front door).

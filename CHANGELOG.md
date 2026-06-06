@@ -3,6 +3,49 @@
 What shipped, plus every review finding and its resolution (rule 2). Newest
 first. This is the audit trail; STATUS.md is the current-state snapshot.
 
+## 2026-06-06, session 10: CME Micro G6 FX carry feasibility kill
+
+The registered G10 Micro FX backup from ADR 0006 was tested as a feasibility gate before
+any implementation. Shipped on `feat/g10-fx-carry-feasibility`:
+
+- `docs/decisions/0007-kill-cme-micro-g6-fx-carry.md`: the decision to kill the
+  deployable CME Micro FX carry strategy before code.
+- `docs/research/0006-g10-micro-fx-feasibility.md`: the data, methodology, execution,
+  and stress review note.
+- README / STATUS / pyproject / memory updates so the project front door no longer lists
+  G10 Micro FX as pending.
+
+**VERDICT: NON-VIABLE BEFORE IMPLEMENTATION.** The exchange-traded micro universe is
+not G10; it is CME Micro G6, covering AUD, CAD, CHF, EUR, GBP, and JPY versus USD. The
+data lane found plausible free sources for a measurement-only spot-plus-policy-rate FX
+study, but the exact free historical CME settlement path is not robust enough for a
+scripted long-history futures backtest. CME points historical settlement products toward
+DataMine, and local direct TCF CSV fetches returned HTTP 403. The stress lane also failed:
+one short `MSF` loses about USD 2,438 in the January 2015 CHF shock, while two to three
+short CHF funding legs can plausibly hit roughly 49% to 73% of a USD 10,000 account before
+slippage, widened spreads, or liquidation friction.
+
+#### Research review and resolutions
+
+- **Data lane [kill accepted]:** free BIS/Fed/FRED spot FX, BIS policy-rate, VIX, and CFTC
+  COT paths are enough for measurement, but not enough for a deployable CME Micro futures
+  verdict. Resolution: kill the exchange-traded strategy; leave measurement-only FX carry as
+  a separately scoped future option.
+- **Methodology lane [kill accepted]:** classic carry economics are real, but recent work
+  flags unstable out-of-sample performance, compressed G10 premia, and crash-risk exposure.
+  Resolution: no optimized COT, VIX threshold, or volatility-scaling rescue is allowed after
+  failure unless recorded as a new trial family.
+- **Execution lane [kill accepted]:** minimum micro contract sizing is too lumpy for a
+  diversified USD 10,000 carry basket. Resolution: fail the stress-loss gate before code.
+- **Senior review [decision]:** do not call the strategy G10, do not proxy a deployable
+  futures strategy with policy-rate spot carry, and do not implement a backtest whose data
+  or integer-sizing assumptions already fail the pre-code gates.
+
+Verification: docs-only PR. Ran source-link and endpoint probes for official CME, CFTC,
+BIS/Fed/FRED, Cboe, SNB, and BIS stress references; local CFTC financial COT ZIP checks
+returned HTTP 200 for 2025 and 2026, while direct CME TCF settlement CSV fetches returned
+HTTP 403. Final hygiene checks are recorded in the PR description.
+
 ## 2026-06-06, session 9 (Study 4 PR6a): BTC/ETH slow trend gate + verdict
 
 The BTC/ETH slow trend gate from ADR 0006 is built and returns another honest null.

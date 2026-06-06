@@ -23,8 +23,10 @@ of candidate premia:
    spot-only rule is positive and drawdown-reducing, but non-viable because the CPCV
    stress minimum conditional PSR(0) is 0.1439, below the 0.95 gate
    ([ADR 0006](docs/decisions/0006-pivot-to-btc-eth-slow-trend.md)).
-5. **G10 Micro FX carry** (registered backup): pending a free-data path and stress-loss
-   gate before any build.
+5. **CME Micro G6 FX carry** (Study 5 feasibility): killed before implementation because
+   the exact free historical CME settlement path is not robust enough for a deployable
+   futures backtest and USD 10,000 integer-contract stress can fail account survival
+   ([ADR 0007](docs/decisions/0007-kill-cme-micro-g6-fx-carry.md)).
 
 Sibling to [pit-backtest](https://github.com/sjdoane/pit-backtest), whose headline was a
 *reproducible honest momentum null*. The contribution here is the same: cost realism,
@@ -33,9 +35,9 @@ backtest. An honest null is a success; a blown-up account or an oversold backtes
 failure.
 
 > **Status (2026-06-06):** Studies 1, 2 tradeable layer, 3, and 4 are honest nulls.
-> Study 2's measurement layer remains a positive finding. The registered backup is G10
-> Micro FX carry, subject first to a free-data and stress-loss gate. Live state is always
-> in [STATUS.md](STATUS.md).
+> Study 2's measurement layer remains a positive finding. Study 5, the CME Micro G6 FX
+> carry feasibility pass, was killed before implementation. Live state is always in
+> [STATUS.md](STATUS.md).
 
 ## Study 2 result: the BTC variance risk premium
 
@@ -106,6 +108,10 @@ Each study ships whatever the result is, an honest null included. The criterion 
   kill if 2022+ net-of-cost CPCV stress minimum conditional PSR(0) is below 0.95,
   max drawdown exceeds 35%, turnover costs consume more than 25% of gross edge, or the
   result only passes by relaxing the 100% notional cap. **Triggered: killed.**
+- **Study 5 (CME Micro G6 FX carry feasibility,** [ADR 0007](docs/decisions/0007-kill-cme-micro-g6-fx-carry.md)**):**
+  kill before implementation if the exact free futures-settlement data path fails or
+  minimum practical micro sizing can plausibly lose more than 50% of a USD 10,000 account.
+  **Triggered: killed.**
 
 ## Methodology (the shared discipline)
 
@@ -150,7 +156,8 @@ every number on its own. Dependencies are pinned to exact patch; mypy runs stric
   (data layer), [0003](docs/decisions/0003-cost-model-and-null.md) (cost model + the carry
   kill), [0004](docs/decisions/0004-pivot-to-variance-risk-premium.md) (the VRP pivot),
   [0005](docs/decisions/0005-pivot-to-ctrend-trend-factor.md) (CTREND), and
-  [0006](docs/decisions/0006-pivot-to-btc-eth-slow-trend.md) (BTC/ETH slow trend).
+  [0006](docs/decisions/0006-pivot-to-btc-eth-slow-trend.md) (BTC/ETH slow trend), and
+  [0007](docs/decisions/0007-kill-cme-micro-g6-fx-carry.md) (CME Micro G6 FX feasibility).
 - [CHANGELOG.md](CHANGELOG.md) is the audit trail: every review finding and its resolution.
 
 ## Setup

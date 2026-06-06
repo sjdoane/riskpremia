@@ -167,4 +167,5 @@ non-viable verdict: 229 weekly observations, mean net +0.1975 percent per week,
 full-window conditional PSR(0) 0.6970, CPCV stress minimum conditional PSR(0) 0.1439,
 daily max drawdown 26.65 percent, cost share 11.47 percent, and compounded net gain
 43.91 percent. The result is positive and drawdown-reducing, but it fails the statistical
-kill gate. G10 Micro FX carry remains the registered backup.
+kill gate. The G10 Micro FX backup named here was later tested and killed at feasibility
+in [ADR 0007](0007-kill-cme-micro-g6-fx-carry.md).
