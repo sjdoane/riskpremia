@@ -1,7 +1,7 @@
 [project]
 name = "riskpremia"
 version = "0.0.0"
-description = "A reproducible, intellectually-honest measurement study of crypto risk premia, sibling to pit-backtest. Funding carry, VRP tradeability, and CTREND are honest nulls; active track is a BTC/ETH slow-trend allocation gate."
+description = "A reproducible, intellectually-honest measurement study of crypto risk premia, sibling to pit-backtest. Funding carry, VRP tradeability, CTREND, and BTC/ETH slow trend are honest nulls; the registered backup is G10 Micro FX carry."
 readme = "README.md"
 requires-python = ">=3.11,<3.13"
 license = { file = "LICENSE" }

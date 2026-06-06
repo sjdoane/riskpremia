@@ -4,9 +4,9 @@ Single source of truth for where Project RiskPremia is and what is deferred.
 Read this FIRST on any new session, then the ADRs it points to. Update after
 every meaningful work block (rule 2).
 
-Last updated: 2026-06-06 (session 8: CTREND PR3 merged; post-null strategy fork completed; ADR 0006 accepted. Active next study is BTC/ETH slow trend with cash and a volatility cap. Next build: PR6a `btc_eth_trend_gate`, a no-fit gate with 200-day MA, 25% vol target, 100% notional cap, realistic spot costs, and a frozen kill criterion).
+Last updated: 2026-06-06 (session 9: Study 4 PR6a BTC/ETH slow trend gate built and killed. The rule is positive and drawdown-reducing, but CPCV stress minimum conditional PSR(0) is 0.1439, below the 0.95 bar. Next registered backup after this PR is G10 Micro FX carry, starting with a free-data and stress-loss gate).
 
-**Study 4 (BTC/ETH slow trend, ADR 0006): ACTIVE.** After the CTREND null, five vertical research reviews and an adversarial senior-quant decision review selected a conservative retail-deployable allocation test rather than another execution-fragile premium harvest. The next strategy is a weekly BTC/ETH spot-only trend gate: hold each asset only when the prior close is above its 200-day moving average, otherwise cash; equal-risk active assets; 25% annualized volatility target; 100% notional cap; realistic spot costs; no leverage, shorts, perps, option legs, or parameter search. **Pre-registered kill:** kill if net-of-cost 2022+ CPCV-min DSR is below 0.95, max drawdown exceeds 35%, turnover costs consume more than 25% of gross edge, or the result only passes by relaxing the 100% notional cap. Backup if it dies quickly: G10 Micro FX carry with a hard risk-off switch, subject first to a free-data and stress-loss gate.
+**Study 4 (BTC/ETH slow trend, ADR 0006): DONE, NON-VIABLE.** PR6a `btc_eth_trend_gate` tested the frozen weekly BTC/ETH spot-only trend rule selected after the CTREND null: strict 200-day moving-average signal, Sunday close signal formation, Monday open fill, next Monday open exit, equal-risk active assets, 25% annualized volatility target, 100% notional cap, zero-yield cash, and realistic Kraken spot costs. The 2022+ out-of-sample result is positive but fails the statistical gate: 229 weekly observations, mean net +0.1975%/week, full-window conditional PSR(0) 0.6970, CPCV stress minimum conditional PSR(0) 0.1439, daily max drawdown 26.65%, cost share 11.47%, compounded net gain 43.91%, CAGR 8.64%. **Verdict:** non-viable because CPCV stress PSR 0.144 is below the 0.95 bar. The committed artifact is `artifacts/btc_eth_trend_gate.json`; method note is `docs/research/0005-btc-eth-trend-gate-design.md`. Registered backup: G10 Micro FX carry with a hard risk-off switch, subject first to a free-data and stress-loss gate.
 
 **Study 3 (CTREND, ADR 0005): a faithful replication-and-stress of the one peer-reviewed crypto cost-survival claim (Fieberg et al., JFQA 2025) under the project's REALISTIC retail cost model + a 2022-2026 OOS extension + proper deflation. The FIRST FITTED signal in the project (the CPCV + trial-registry + DSR deflation are load-bearing). PR1 the point-in-time multi-coin universe data layer is DONE, PR2 the trend-feature signal + cross-sectional elastic-net aggregation is DONE, and PR3 the backtest + kill gate + verdict is DONE. Verdict: the retail LONG-ONLY top quintile is NON-VIABLE after costs (mean net -0.906%/week, full OOS DSR 0.0034, CPCV-min DSR 0.0031), and the academic LONG-SHORT comparison also fails the conservative CPCV-min DSR gate (mean net +0.197%/week, full OOS DSR 0.225, CPCV-min DSR 0.0035).**
 
@@ -18,17 +18,17 @@ Last updated: 2026-06-06 (session 8: CTREND PR3 merged; post-null strategy fork 
 
 ## One-line state
 
-A reproducible, intellectually-honest MEASUREMENT study of crypto risk premia, now on
-Study 4. Study 1 (funding carry, ADR 0003) was killed honestly: net-of-cost Deflated
+A reproducible, intellectually-honest MEASUREMENT study of crypto risk premia. Study 1
+(funding carry, ADR 0003) was killed honestly: net-of-cost Deflated
 Sharpe ~0 on every US-tradeable venue and horizon. Study 2 (VRP, ADR 0004) measured a
 real positive BTC variance premium, but the cost-gated monthly short-straddle
 implementation was non-viable after costs and crash-tail accounting. Study 3 (CTREND,
 ADR 0005) found real gross cross-sectional signal quality, but the retail long-only
 top quintile was non-viable after costs and the academic long-short comparison also
-failed the conservative CPCV-min DSR gate. **Active next study: BTC/ETH slow trend with
-cash and a volatility cap (ADR 0006).** Next build: PR6a `btc_eth_trend_gate`, a no-fit
-weekly spot-only allocation gate with 200-day MA, 25% vol target, 100% notional cap,
-realistic spot costs, CPCV-min DSR, drawdown, and turnover-cost kill checks.
+failed the conservative CPCV-min DSR gate. Study 4 (BTC/ETH slow trend, ADR 0006)
+was positive and drawdown-reducing but non-viable because its CPCV stress minimum
+conditional PSR(0) was 0.1439, below the 0.95 bar. **Next registered backup: G10 Micro
+FX carry with a hard risk-off switch**, subject first to a free-data and stress-loss gate.
 Repo: https://github.com/sjdoane/riskpremia.
 
 ## Dev commands (Windows PowerShell; the venv is run DIRECTLY)
@@ -36,13 +36,15 @@ Repo: https://github.com/sjdoane/riskpremia.
 ```
 $env:PYTHONIOENCODING="utf-8"
 $py = "C:\Users\SamJD\.venvs\riskpremia\Scripts\python.exe"
-& $py -m pytest -q -m "not network" # 218 pass (offline); never touch the off-limits pit-backtest venvs
-& $py -m pytest -q -m network       # 16 live: Binance Vision + OKX + Deribit DVOL + Tardis (the real-data proof)
-& $py -m mypy                       # strict, src + scripts (55 source files)
+& $py -m pytest -q -m "not network" # 233 pass / 1 skipped / 16 deselected; never touch the off-limits pit-backtest venvs
+& $py -m pytest -q -m network       # 16 pass / 234 deselected: Binance Vision + OKX + Deribit DVOL + Tardis
+& $py -m mypy                       # strict, src + scripts (61 source files)
 & $py -m ruff check src tests scripts
 & $py -m scripts.build_ctrend_universe # one-time: fetch the live USDT universe -> committed CTREND panel + artifact + stamp
 & $py -m scripts.build_ctrend_signal   # one-time (no network): committed panel -> committed CTREND signal artifact
 & $py -m scripts.run_ctrend_gate     # no-network: committed panel -> committed CTREND net-of-cost gate artifact
+& $py -m scripts.build_btc_eth_trend_inputs # one-time: fetch BTC/ETH daily OHLC -> committed fixture + stamp
+& $py -m scripts.run_btc_eth_trend_gate # no-network: committed BTC/ETH fixture -> committed Study 4 gate artifact
 & $py -m scripts.build_vrp_artifact # one-time: fetch live data -> committed VRP artifact + fixtures + manifest stamp
 & $py -m scripts.regenerate_figures # render docs/figures/*.png from the committed artifact (no network)
 ```
@@ -77,6 +79,12 @@ matplotlib, render-only; CI installs only `.[dev]` and skips the figure render t
 - `strategy/null.py`: the entry-selection nulls (always-on, non-overlapping, random
   subset). `scripts/run_null_gate.py`: the kill-gate entry point (fetch + surface +
   verdict). `data/sources/binance_vision.py`: + the ms/us kline-timestamp normalizer.
+- `trend/` + `scripts/{build_btc_eth_trend_inputs,run_btc_eth_trend_gate}.py` (Study 4,
+  PR6a): the BTC/ETH slow trend gate from committed daily OHLC fixtures. It forms the
+  signal after Sunday close, fills at Monday open, exits at the next Monday open, charges
+  Kraken spot turnover costs before the holding return, scores conditional PSR(0) with a
+  CPCV worst-regime stress, and writes `artifacts/btc_eth_trend_gate.json`. Verdict:
+  non-viable because CPCV stress PSR 0.144 is below the 0.95 bar.
 - `data/sources/tardis_options.py` (PR5c): the Layer-ii Tardis Deribit option-chain
   loader (`OptionQuoteRecord`, `PydanticTardisOptionRow`, `us_to_utc`, the `tardis`
   venue), streaming the free first-of-month ~1.8GB gzip + extracting a backward as-of
@@ -93,8 +101,9 @@ matplotlib, render-only; CI installs only `.[dev]` and skips the figure render t
   short-straddle backtest + the regime tail-loss table + the cited peso shock + the
   NON-VIABLE verdict; the committed entries fixture (`tests/data/vrp_straddle_entries.csv`,
   SHA-stamped) + the gate artifact (`artifacts/vrp_short_variance_gate.json`).
-- 174 offline + 12 live `network` tests (the figure render test runs locally, skipif
-  in CI); mypy --strict (src + scripts) / ruff / em-dash clean; CI green
+- 233 offline pass + 1 skipped + 16 live `network` tests (the figure render test runs
+  locally, skipif in CI); mypy strict (src + scripts, 61 source files) / ruff /
+  em-dash clean; CI green
   (`.github/workflows/ci.yml`, installs `.[dev]`, runs ruff + mypy + `pytest -m "not
   network"`, so CI runs the offline set).
 
@@ -224,7 +233,8 @@ the gate is about REAL-MONEY deployment.
 ADR 0001 (lead-track decision + the kill criterion), ADR 0002 (the data layer +
 funding clock, incl the PR3 OKX/delta amendment), ADR 0003 (the cost model + null),
 ADR 0004 (VRP pivot + completed non-viable tradeable gate), ADR 0005 (CTREND pivot +
-completed non-viable gate), ADR 0006 (active BTC/ETH slow-trend pivot).
+completed non-viable gate), ADR 0006 (completed BTC/ETH slow-trend pivot +
+non-viable PR6a gate).
 `docs/research/0001-data-layer-design.md` (the reviewed data-layer design).
 CHANGELOG.md (every review finding + resolution). The `project_riskpremia` memory
 note (cross-session summary). README.md (the reviewer-facing front door).

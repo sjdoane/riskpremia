@@ -3,6 +3,80 @@
 What shipped, plus every review finding and its resolution (rule 2). Newest
 first. This is the audit trail; STATUS.md is the current-state snapshot.
 
+## 2026-06-06, session 9 (Study 4 PR6a): BTC/ETH slow trend gate + verdict
+
+The BTC/ETH slow trend gate from ADR 0006 is built and returns another honest null.
+Shipped on `feat/btc-eth-trend-gate`:
+
+- `trend/gate.py`: the frozen weekly BTC/ETH spot-only rule. Signal forms after Sunday
+  close with strict `close > 200-day SMA`, fills at Monday open, exits at the next Monday
+  open, sizes active assets by inverse volatility under a 25% annualized volatility target
+  and 100% notional cap, books Kraken spot turnover costs before the holding return, builds
+  a daily mark-to-market equity path, and scores conditional PSR(0) with a purged CPCV
+  worst-regime stress.
+- `trend/fixtures.py` plus `scripts/build_btc_eth_trend_inputs.py`: the committed
+  BTC/ETH daily OHLC fixture and source provenance file, built from Binance Vision monthly
+  spot kline zips and SHA256-stamped in `data/snapshots/manifest.toml`.
+- `scripts/run_btc_eth_trend_gate.py`: offline artifact regeneration from the committed
+  fixture.
+- `artifacts/btc_eth_trend_gate.json`: the committed gate artifact.
+- `docs/research/0005-btc-eth-trend-gate-design.md`: the method, review resolutions,
+  and result note.
+- `tests/unit/test_trend_fixtures.py`, `tests/unit/test_trend_gate.py`, and
+  `tests/unit/test_trend_gate_reproduces.py`: fixture, execution-mechanics, and offline
+  reproduction tests.
+
+**VERDICT: NON-VIABLE BTC/ETH slow-trend honest null.** On the 2022+ window, the strategy
+has 229 weekly observations, mean net return **+0.1975%/week**, full-window conditional
+PSR(0) **0.6970**, CPCV stress minimum conditional PSR(0) **0.1439**, daily max drawdown
+**26.65%**, total cost share **11.47%**, compounded net gain **43.91%**, and CAGR
+**8.64%**. It is positive and drawdown-reducing versus buy-and-hold, but fails the
+statistical kill gate because the CPCV stress PSR is far below 0.95.
+
+#### Design review (fix before implementation, 3 Critical + 4 High, all resolved or accepted)
+
+- **C1 [fixed]:** a same-close signal and fill would create look-ahead. Resolved by making
+  the Sunday close the signal timestamp, Monday open the fill, and next Monday open the
+  exit. The artifact carries separate signal, fill, and exit dates.
+- **C2 [fixed]:** the no-fit rule should not be labelled DSR with an effective trial count
+  of one. Resolved by labelling the statistic conditional PSR(0); CPCV is a
+  worst-regime stress, not fitted-model validation.
+- **C3 [fixed]:** weekly endpoint drawdown can hide a midweek crash. Resolved by building
+  and scoring a daily mark-to-market equity path.
+- **H1 [fixed]:** costs must be self-financing. Resolved with
+  `net = (1 - cost_fraction) * (1 + holding_return) - 1`.
+- **H2 [fixed]:** cost share must be total costs paid divided by compounded gross edge,
+  with automatic failure when gross edge is not positive.
+- **H3 [accepted, pass blocker]:** Binance Vision USDT spot is not a US spot USD venue.
+  A pass would require a US venue rebuild before belief. The fail can ship under the caveat.
+- **H4 [fixed]:** artifact dates must separate signal, fill, and exit. The JSON now does.
+
+#### Post-implementation review (SHIP after Medium test hardening, 0 Critical/High)
+
+The reviewer independently rebuilt the weekly logic from the committed CSV without calling
+`trend.gate` and matched the artifact exactly on week count, first and last dates, net gain,
+gross gain, total costs paid, and daily max drawdown. No Critical or High issues were found.
+Resolved Medium and Low follow-ups:
+
+- Added surgical tests that fail if the implementation regresses to same-close or
+  close-to-close execution.
+- Added a daily drawdown test where a midweek crash recovers by the weekly endpoint.
+- Added a direct test that nonpositive compounded gross edge makes cost share infinite and
+  fails the cost gate.
+- Tightened the reproduction test to compare the full artifact JSON structure, including
+  weekly rows and the daily equity path, with exact non-floats and tolerant floats.
+- Made duplicate `(symbol, date)` bars a loud fixture error on both write and read paths.
+- Pinned the BTC/ETH source provenance JSON to LF on disk and in `.gitattributes`, so the
+  manifest hash is stable on Windows and Linux checkouts.
+- Added an explicit zero-yield cash guard and test.
+- Aligned the buy-and-hold diagnostic to the same exit-open convention as the strategy.
+- Added a Binance Vision `fetch_spot_klines` passthrough test for the new open field.
+
+Verification: `pytest -q -m "not network"` 233 pass / 1 skipped / 16 deselected;
+`pytest -q -m network` 16 pass / 234 deselected; `mypy` clean (61 source files);
+`ruff check src tests scripts` clean. The committed artifact reproduces offline from the
+committed fixtures.
+
 ## 2026-06-06, session 8: post-CTREND strategy fork and ADR 0006
 
 The CTREND null triggered the next pivot. No code changed in this work block. The

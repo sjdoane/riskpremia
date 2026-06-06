@@ -19,10 +19,12 @@ of candidate premia:
    real rank-IC quality, but the retail long-only top quintile is non-viable after
    realistic costs, and the academic long-short comparison also fails the conservative
    CPCV-min DSR gate ([ADR 0005](docs/decisions/0005-pivot-to-ctrend-trend-factor.md)).
-4. **BTC/ETH slow trend with cash and a volatility cap** (Study 4, active): a no-fit,
-   weekly spot-only allocation gate with a frozen 200-day moving-average signal, 25%
-   annualized volatility target, 100% notional cap, and realistic spot costs
+4. **BTC/ETH slow trend with cash and a volatility cap** (Study 4): the frozen weekly
+   spot-only rule is positive and drawdown-reducing, but non-viable because the CPCV
+   stress minimum conditional PSR(0) is 0.1439, below the 0.95 gate
    ([ADR 0006](docs/decisions/0006-pivot-to-btc-eth-slow-trend.md)).
+5. **G10 Micro FX carry** (registered backup): pending a free-data path and stress-loss
+   gate before any build.
 
 Sibling to [pit-backtest](https://github.com/sjdoane/pit-backtest), whose headline was a
 *reproducible honest momentum null*. The contribution here is the same: cost realism,
@@ -30,10 +32,10 @@ confound controls, a pre-registered kill criterion, and reproducibility, never a
 backtest. An honest null is a success; a blown-up account or an oversold backtest is a
 failure.
 
-> **Status (2026-06-06):** Studies 1, 2 tradeable layer, and 3 are honest nulls.
-> Study 2's measurement layer remains a positive finding. Study 4 is active: PR6a
-> `btc_eth_trend_gate` will test the frozen BTC/ETH slow-trend allocation. Live state
-> is always in [STATUS.md](STATUS.md).
+> **Status (2026-06-06):** Studies 1, 2 tradeable layer, 3, and 4 are honest nulls.
+> Study 2's measurement layer remains a positive finding. The registered backup is G10
+> Micro FX carry, subject first to a free-data and stress-loss gate. Live state is always
+> in [STATUS.md](STATUS.md).
 
 ## Study 2 result: the BTC variance risk premium
 
@@ -101,9 +103,9 @@ Each study ships whatever the result is, an honest null included. The criterion 
   published cost-survival claim does not hold under the project's realistic retail-cost
   stress. **Triggered: killed.**
 - **Study 4 (BTC/ETH slow trend,** [ADR 0006](docs/decisions/0006-pivot-to-btc-eth-slow-trend.md)**):**
-  kill if 2022+ net-of-cost CPCV-min DSR is below 0.95, max drawdown exceeds 35%,
-  turnover costs consume more than 25% of gross edge, or the result only passes by
-  relaxing the 100% notional cap.
+  kill if 2022+ net-of-cost CPCV stress minimum conditional PSR(0) is below 0.95,
+  max drawdown exceeds 35%, turnover costs consume more than 25% of gross edge, or the
+  result only passes by relaxing the 100% notional cap. **Triggered: killed.**
 
 ## Methodology (the shared discipline)
 
@@ -146,8 +148,9 @@ every number on its own. Dependencies are pinned to exact patch; mypy runs stric
 - [docs/decisions/](docs/decisions/) is the ADR log: [0001](docs/decisions/0001-lead-track-selection.md)
   (lead-track choice + kill criterion), [0002](docs/decisions/0002-data-layer-funding-clock.md)
   (data layer), [0003](docs/decisions/0003-cost-model-and-null.md) (cost model + the carry
-  kill), [0004](docs/decisions/0004-pivot-to-variance-risk-premium.md) (the VRP pivot,
-  the two-layer design, the binding caveats).
+  kill), [0004](docs/decisions/0004-pivot-to-variance-risk-premium.md) (the VRP pivot),
+  [0005](docs/decisions/0005-pivot-to-ctrend-trend-factor.md) (CTREND), and
+  [0006](docs/decisions/0006-pivot-to-btc-eth-slow-trend.md) (BTC/ETH slow trend).
 - [CHANGELOG.md](CHANGELOG.md) is the audit trail: every review finding and its resolution.
 
 ## Setup
