@@ -3,6 +3,72 @@
 What shipped, plus every review finding and its resolution (rule 2). Newest
 first. This is the audit trail; STATUS.md is the current-state snapshot.
 
+## 2026-06-06, session 12: Study 6 cross-asset trend gate, the first qualified pass
+
+The pre-registered cross-asset defensive trend rule (ADR 0008) is built and returns the
+project's first result to clear the deflated full-sample gate. Shipped on
+`feat/cross-asset-trend-gate`:
+
+- `src/riskpremia/xtrend/` (`bonds.py` the constant-maturity Treasury total-return
+  reconstruction; `fixtures.py` the committed panel; `gate.py` the rule, scoring, and
+  verdict; `errors.py`).
+- `src/riskpremia/data/sources/{ken_french,treasury}.py`: stdlib-only loaders for the
+  Kenneth French daily factors and the US Treasury par yield curve.
+- `scripts/{build_xtrend_inputs,run_xtrend_gate}.py`: the one-time network build of the
+  committed panel and the no-network gate rebuild.
+- `tests/data/xtrend_panel.csv` (+ provenance), `artifacts/xtrend_gate.json`, and the
+  unit, reproduction, and network tests.
+
+**RESULT: QUALIFIED PASS.** On 1990-2026 (8843 daily obs, 425 months), the full-sample
+conditional PSR(0) is 0.9996 and the non-overlapping monthly PSR(0) is 0.9970, both clearing
+the 0.95 bar; the Deflated Sharpe is 0.999/0.999/0.998 at 8/16/32 assumed trials; the maximum
+drawdown is 11.2 percent and costs are 2.8 percent of gross. The result is regime-dependent:
+the CPCV worst fold is 0.7216 and the 2022-onward recency slice is 0.4016. Per-sleeve
+attribution shows the equity trend sleeve carries the result (standalone PSR 0.9981) while the
+long-Treasury sleeve is weaker on its own (0.8456) and drives the recent weakness. This is an
+honest qualified pass on a classic rule, not a novel edge; the contribution is the
+reproducible deflated validation on clean public-domain data.
+
+#### Data-path substitutions (recorded, immaterial to the rule)
+
+- Gold dropped: the FRED London gold series returned HTTP 404 (licensed series no longer
+  served) and no other free keyless public-domain gold path existed, so the headline is the
+  ADR 0008 pre-registered fallback (equity plus Treasury).
+- The ten-year yield is the US Treasury par yield curve (home.treasury.gov, fetched per year),
+  not FRED `DGS10`, because the FRED bulk fetch was unreliable; it is the original source of
+  the same ten-year par yield, with history from 1990 (the common window).
+
+#### Reviews and resolutions
+
+- **Pre-implementation design review (3 blocking, all resolved before the rule was frozen):**
+  a monthly worst-fold gate is un-passable on power (fixed: score the daily mark-to-market
+  series, full-sample conditional PSR(0) primary, CPCV worst fold as reported stress); the
+  bond formula was unstated (fixed: start-of-period-yield constant-maturity formula frozen in
+  ADR 0008); the public-domain sources are mutable (fixed: as-of fixtures, frozen data
+  end-date, tamper-evidence framing).
+- **Implementation finding:** CPCV path-stitching is degenerate for a no-fit rule (returns do
+  not depend on a training set, so every path equals the full sample); the worst held-out fold
+  is the meaningful CPCV stress, and path-stitching is not reported.
+- **Post-implementation review (no Critical or High; reproduced to the digit):** independently
+  rebuilt the daily excess series (maximum absolute difference zero across 8843 days) and the
+  headline statistics, and disproved the central false-pass hypothesis that daily marks of a
+  monthly rule inflate the effective sample. The daily excess series has negative net
+  autocorrelation (summed lag-1-to-49 about -0.15), so the block deflation is conservative, and
+  the non-overlapping monthly PSR(0) (0.997) gives the same verdict. Signal timing verified
+  with no look-ahead (zero mismatches over 426 months), bond reconstruction confirmed
+  point-in-time, costs confirmed correct (expense on held notional, cost share on the gross
+  denominator), result not driven by a few outlier years.
+- **Two medium honesty findings, resolved by adding diagnostics (not by changing the rule):**
+  the per-sleeve standalone conditional PSR(0) (locating the regime risk in the long-Treasury
+  sleeve and exposing the equity-only counterfactual), and the non-overlapping monthly
+  conditional PSR(0) reported alongside the daily one (making the honest monthly independent
+  unit explicit). ADR 0008 amended; design detail in
+  `docs/research/0008-cross-asset-trend-gate-design.md`.
+
+Verification: 262 offline pass / 18 deselected; 18 network pass (now including the Kenneth
+French and US Treasury live sources); mypy strict (70 source files); ruff clean; em-dash
+clean; committed artifact reproduces offline and is tamper-evident against the manifest.
+
 ## 2026-06-06, session 11: Study 6 pivot, cross-asset defensive trend (pre-registration)
 
 After the Study 5 feasibility kill, a fresh strategy fork selected the next candidate.

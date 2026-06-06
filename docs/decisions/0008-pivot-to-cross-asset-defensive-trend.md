@@ -209,3 +209,33 @@ Accepted. The frozen rule and the kill criterion above are pre-registered. The s
 candidate survey and data-path feasibility detail are in
 `docs/research/0007-cross-asset-trend-feasibility.md`. Implementation and the verdict follow in
 the gate build.
+
+## Amendment (implementation, 2026-06-06)
+
+Four points are recorded from the build, none of which change the frozen rule or the kill
+criterion:
+
+- **Gold dropped.** The FRED London gold series returned HTTP 404 (the licensed series is no
+  longer served) and no other free, keyless, public-domain daily gold path was found, so the
+  headline universe is the pre-registered fallback: US equity plus long Treasury.
+- **Treasury source.** The ten-year yield is the US Treasury daily par yield curve
+  (home.treasury.gov), fetched per year, rather than FRED `DGS10`, because the FRED bulk
+  series fetch was unreliable from the build machine. It is the original source of the same
+  ten-year par yield; the par-yield history begins in 1990, which sets the common window.
+- **CPCV path-stitching is degenerate for a no-fit rule** and is not reported: the returns do
+  not depend on a training set, so every stitched path equals the full sample. The worst
+  held-out fold is the meaningful CPCV stress.
+- **The honest independent unit is the month.** The daily marks within a held month share one
+  position, so the non-overlapping monthly conditional PSR(0) is reported alongside the daily
+  one as the conservative cross-check (it gives the same verdict); the daily series is used for
+  resolution, not to inflate the effective sample. The post-implementation review confirmed the
+  daily excess series has negative net autocorrelation, so the deflation is conservative.
+
+**Verdict: a qualified pass.** Full-sample conditional PSR(0) 0.9996 and monthly 0.9970 both
+clear 0.95 and survive deflation (Deflated Sharpe 0.998 at 32 trials), with an 11.2 percent
+maximum drawdown and a 2.8 percent cost share; but the result is regime-dependent (CPCV worst
+fold 0.72, 2022-onward recency 0.40), and per-sleeve attribution shows the equity trend sleeve
+carries it (standalone PSR 0.998) while the long-Treasury sleeve is weaker (0.846) and drives
+the recent-regime weakness. The first result to clear the deflated full-sample gate; an honest
+qualified pass on a classic rule, not a novel edge. Detail in
+`docs/research/0008-cross-asset-trend-gate-design.md`.

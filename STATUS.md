@@ -4,9 +4,9 @@ Single source of truth for where Project RiskPremia is and what is deferred.
 Read this FIRST on any new session, then the ADRs it points to. Update after
 every meaningful work block (rule 2).
 
-Last updated: 2026-06-06 (session 11: Study 6 selected and pre-registered. After a four-lens fork and an adversarial cross-check, the next build is a cross-asset defensive trend rule scored on public-domain data, the one surveyed candidate that repairs Study 4's weakness while staying long-only, low-turnover, retail-executable, and reproducible from free keyless data. The frozen rule and kill criterion are in ADR 0008, with the design-review findings resolved before merge. Implementation and the verdict follow in the gate build).
+Last updated: 2026-06-06 (session 12: Study 6 built and returns the project's FIRST QUALIFIED PASS. The cross-asset defensive trend rule clears the pre-registered deflated full-sample gate (conditional PSR(0) 0.9996, monthly 0.9970, Deflated Sharpe 0.998 at 32 trials), with an 11.2% max drawdown and a 2.8% cost share, but is regime-dependent (CPCV worst fold 0.72, 2022-onward recency 0.40). An adversarial post-implementation review reproduced the headline to the digit and disproved the daily-autocorrelation false-pass hypothesis. Built on clean public-domain data with integrity intact).
 
-**Study 6 (cross-asset defensive trend, ADR 0008): SELECTED AND PRE-REGISTERED; build pending.** A frozen, no-fit, monthly, long-or-cash trend rule across genuinely low-correlated asset classes (US equity and the one-month Treasury bill from the Kenneth French daily factors; long-term US Treasury reconstructed from FRED `DGS10`; gold from FRED), implemented through funds with a modeled fund-versus-index basis. Each sleeve is held long only when its total-return index is above its ten-month moving average, else its capital earns the bill; fixed one-over-N-of-universe equal weight; realistic fund costs (expense ratio on held notional plus per-side turnover); the net series is marked to market daily and scored in excess of the bill. The data path was chosen to pass both pre-code feasibility gates with integrity: scraped fund-price endpoints (which need browser-User-Agent spoofing and restrict redistribution) were rejected on the same standard that killed Study 5, in favour of openly-redistributable public-domain research data. Pre-registered kill criterion: full-sample net-of-cost conditional PSR(0) on the daily excess-of-bills series must be at least 0.95, with the purged-CPCV stress distribution, the recency slices, and a Deflated-Sharpe ladder at 8/16/32 trials reported alongside. An independent senior-quant design review of the pre-registration returned three blocking findings (a monthly worst-fold gate is un-passable on power; the bond reconstruction formula was unstated; the French/FRED fixtures are mutable), all resolved in ADR 0008 before merge. Next: build the gate from committed fixtures, run it, and ship the verdict.
+**Study 6 (cross-asset defensive trend, ADR 0008): DONE, QUALIFIED PASS (the first deployable result).** A frozen, no-fit, monthly, long-or-cash trend rule across US equity and long-term US Treasury (with the one-month bill as cash), each sleeve held long only when its total-return index is above its ten-month moving average, else in the bill; fixed one-over-N-of-universe equal weight; realistic fund costs (expense ratio on held notional plus per-side turnover); the net series marked to market daily and scored in excess of the bill. Data is openly-redistributable public-domain research data (Kenneth French daily factors for US equity total return and the one-month bill; the US Treasury par yield curve for the ten-year, the original source of FRED `DGS10`); scraped fund-price endpoints were rejected (browser-User-Agent spoofing + redistribution-restricted, the Study-5 standard). Gold was dropped (no clean public-domain price path; ADR 0008 pre-registered fallback). **Result (1990-2026, 8843 daily obs, 425 months): full-sample conditional PSR(0) 0.9996, monthly non-overlapping 0.9970, Deflated Sharpe 0.999/0.999/0.998 at 8/16/32 trials, max drawdown 11.2%, cost share 2.8%, CAGR 7.1%, net excess gain 360.6%. PASSES the primary gate, but REGIME-DEPENDENT: CPCV worst fold 0.7216, 2022-onward recency 0.4016. Per-sleeve attribution: equity standalone 0.9981 (the workhorse), long-Treasury standalone 0.8456 (fails its own gate, drives the recent-regime weakness).** Honest qualified pass on a classic rule, not a novel edge; the contribution is the reproducible deflated validation on clean data. The committed artifact is `artifacts/xtrend_gate.json`; the design + reviews are in `docs/research/0008-cross-asset-trend-gate-design.md`. Pre-build design review (3 blocking findings) and an adversarial post-implementation review (reproduced to the digit; disproved the false-pass hypothesis; two medium honesty findings resolved by adding the monthly PSR + the per-sleeve attribution to the artifact) per rule 1. Next: optional recruiter-facing figures; otherwise a fresh fork (the registered backup is the crypto funding-dispersion measurement note).
 
 **Study 5 (CME Micro G6 FX carry feasibility, ADR 0007): DONE, NON-VIABLE BEFORE IMPLEMENTATION.** The G10 Micro FX backup from ADR 0006 was tested as a pre-code feasibility gate, not a backtest. The honest tradeable scope is CME Micro G6, not G10: micro contracts cover AUD, CAD, CHF, EUR, GBP, and JPY versus USD, while NZD, NOK, and SEK are missing at micro size. The data lane found free spot FX, policy-rate, VIX, and CFTC positioning paths, but the exact free historical CME settlement path is not robust enough for a long-history, scriptable futures backtest; CME routes historical settlement products through DataMine and local direct TCF CSV fetches returned HTTP 403. The stress lane also failed: one short `MSF` loses about USD 2,438 in the January 2015 CHF shock; two to three short CHF funding legs can plausibly hit 49% to 73% of a USD 10,000 account before slippage or liquidation friction. **Verdict:** kill CME Micro G6 FX carry as a deployable RiskPremia strategy before code. A spot-plus-policy-rate FX carry measurement note remains possible, but it is not a tradeable CME Micro verdict. Next step: fresh strategy fork with data and minimum-size stress gates applied before implementation.
 
@@ -34,9 +34,14 @@ was positive and drawdown-reducing but non-viable because its CPCV stress minimu
 conditional PSR(0) was 0.1439, below the 0.95 bar. Study 5 (CME Micro G6 FX carry,
 ADR 0007) was killed at feasibility because the exact free futures-settlement data path
 and USD 10,000 integer-contract stress gate failed. Study 6 (cross-asset defensive trend,
-ADR 0008) is selected and pre-registered: a frozen, no-fit, long-only trend rule across
-low-correlated asset classes on public-domain data, the deployable swing that repairs
-Study 4's weakness with integrity. **Next step: build the Study 6 gate and ship the verdict.**
+ADR 0008) is the project's FIRST QUALIFIED PASS: a frozen, no-fit, long-only stock/bond
+trend rule into T-bills on clean public-domain data clears the deflated full-sample gate
+(conditional PSR(0) 0.9996, monthly 0.9970, Deflated Sharpe 0.998 at 32 trials, 11.2% max
+drawdown, 2.8% cost share), but is regime-dependent (CPCV worst fold 0.72, 2022-onward 0.40;
+equity-trend-driven, the bond sleeve is the weak part). An honest qualified pass on a classic
+rule, reproduced to the digit by an adversarial post-implementation review.
+**Next step: optional recruiter figures, or a fresh fork (backup: a crypto funding-dispersion
+measurement note).**
 Repo: https://github.com/sjdoane/riskpremia.
 
 ## Dev commands (Windows PowerShell; the venv is run DIRECTLY)
@@ -44,15 +49,17 @@ Repo: https://github.com/sjdoane/riskpremia.
 ```
 $env:PYTHONIOENCODING="utf-8"
 $py = "C:\Users\SamJD\.venvs\riskpremia\Scripts\python.exe"
-& $py -m pytest -q -m "not network" # 233 pass / 1 skipped / 16 deselected; never touch the off-limits pit-backtest venvs
-& $py -m pytest -q -m network       # 16 pass / 234 deselected: Binance Vision + OKX + Deribit DVOL + Tardis
-& $py -m mypy                       # strict, src + scripts (61 source files)
+& $py -m pytest -q -m "not network" # 262 pass / 18 deselected; never touch the off-limits pit-backtest venvs
+& $py -m pytest -q -m network       # 18 pass: Binance Vision + OKX + Deribit DVOL + Tardis + Kenneth French + US Treasury
+& $py -m mypy                       # strict, src + scripts (70 source files)
 & $py -m ruff check src tests scripts
 & $py -m scripts.build_ctrend_universe # one-time: fetch the live USDT universe -> committed CTREND panel + artifact + stamp
 & $py -m scripts.build_ctrend_signal   # one-time (no network): committed panel -> committed CTREND signal artifact
 & $py -m scripts.run_ctrend_gate     # no-network: committed panel -> committed CTREND net-of-cost gate artifact
 & $py -m scripts.build_btc_eth_trend_inputs # one-time: fetch BTC/ETH daily OHLC -> committed fixture + stamp
 & $py -m scripts.run_btc_eth_trend_gate # no-network: committed BTC/ETH fixture -> committed Study 4 gate artifact
+& $py -m scripts.build_xtrend_inputs # one-time: fetch Kenneth French + US Treasury -> committed Study 6 panel + stamp
+& $py -m scripts.run_xtrend_gate     # no-network: committed panel -> committed Study 6 cross-asset trend gate artifact
 & $py -m scripts.build_vrp_artifact # one-time: fetch live data -> committed VRP artifact + fixtures + manifest stamp
 & $py -m scripts.regenerate_figures # render docs/figures/*.png from the committed artifact (no network)
 ```
@@ -245,6 +252,7 @@ completed non-viable gate), ADR 0006 (completed BTC/ETH slow-trend pivot +
 non-viable PR6a gate), ADR 0007 (completed CME Micro G6 FX carry feasibility kill), ADR 0008
 (cross-asset defensive trend pivot, pre-registered, build pending).
 `docs/research/0001-data-layer-design.md` (the reviewed data-layer design),
-`docs/research/0007-cross-asset-trend-feasibility.md` (the Study 6 candidate survey + data probe).
+`docs/research/0007-cross-asset-trend-feasibility.md` (the Study 6 candidate survey + data probe),
+`docs/research/0008-cross-asset-trend-gate-design.md` (the Study 6 gate design, result, and reviews).
 CHANGELOG.md (every review finding + resolution). The `project_riskpremia` memory
 note (cross-session summary). README.md (the reviewer-facing front door).
