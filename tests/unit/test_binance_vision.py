@@ -138,12 +138,19 @@ def _make_kline_zip(path: Path, lines: list[str]) -> None:
 
 def test_parse_kline_zip_with_and_without_header(tmp_path: Path) -> None:
     src = BinanceVisionSource(Path("unused"))
-    # high = col 2 (9100), low = col 3 (8900), close = col 4 (9050.5), close_time = col 6,
-    # quote_asset_volume = col 7 (the USD dollar volume); all returned in the 5-tuple.
+    # open = col 1, high = col 2, low = col 3, close = col 4, close_time = col 6,
+    # quote_asset_volume = col 7 (the USD dollar volume); all returned in the tuple.
     data_row = "1577836800000,9000,9100,8900,9050.5,10,1577865599999,90500.25,0,0,0,0"
     header = "open_time,open,high,low,close,volume,close_time,qv,count,tb,tbq,ignore"
     expected = [
-        (1577865599999, Decimal("9100"), Decimal("8900"), Decimal("9050.5"), Decimal("90500.25"))
+        (
+            1577865599999,
+            Decimal("9000"),
+            Decimal("9100"),
+            Decimal("8900"),
+            Decimal("9050.5"),
+            Decimal("90500.25"),
+        )
     ]
 
     no_header = tmp_path / "k1.zip"
@@ -153,6 +160,26 @@ def test_parse_kline_zip_with_and_without_header(tmp_path: Path) -> None:
     with_header = tmp_path / "k2.zip"
     _make_kline_zip(with_header, [header, data_row])
     assert src._parse_kline_zip(with_header) == expected
+
+
+def test_fetch_spot_klines_carries_open(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    src = BinanceVisionSource(tmp_path)
+    data_row = "1577836800000,9000,9100,8900,9050.5,10,1577865599999,90500.25,0,0,0,0"
+    path = tmp_path / "BTCUSDT-1d-2020-01.zip"
+    _make_kline_zip(path, [data_row])
+    monkeypatch.setattr(src, "available_spot_months", lambda _symbol, _interval: ("2020-01",))
+    monkeypatch.setattr(src, "_download_and_verify", lambda _key, _relpath: path)
+
+    recs = src.fetch_spot_klines(
+        "BTCUSDT",
+        "1d",
+        datetime(2020, 1, 1, tzinfo=UTC),
+        datetime(2020, 1, 2, tzinfo=UTC),
+    )
+
+    assert len(recs) == 1
+    assert recs[0].open == Decimal("9000")
+    assert recs[0].close == Decimal("9050.5")
 
 
 def _funding_zip(month: str, rows: list[str]) -> tuple[bytes, bytes]:

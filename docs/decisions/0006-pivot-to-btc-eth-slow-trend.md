@@ -1,6 +1,6 @@
 # ADR 0006: pivot to BTC/ETH slow trend with cash and a volatility cap
 
-Status: Accepted.
+Status: Accepted. PR6a completed with a non-viable verdict.
 Date: 2026-06-06.
 Authors: Sam Doane (strategy-pivot fork after the CTREND null, with five
 web-grounded vertical reviews and an adversarial senior-quant decision review).
@@ -137,19 +137,21 @@ loss at the minimum practical contract size can plausibly exceed 50 percent of a
 
 Scope:
 
-- Build a no-network gate from committed BTC/ETH daily close fixtures, with a network
+- Build a no-network gate from committed BTC/ETH daily OHLC fixtures, with a network
   builder that can refresh the fixtures from free public sources.
 - Implement the frozen 200-day moving-average signal, weekly rebalance, cash proxy,
   equal-risk active-asset sizing, 25 percent volatility target, 100 percent notional cap,
   and spot-cost model.
-- Score the series through 2026-05-31 with the existing DSR, CPCV, and trial-registry
-  stack.
+- Score the series through 2026-05-31 with the existing PSR, CPCV, and effective-sample
+  stack. Because the rule is frozen and no-fit, the statistic is conditional PSR(0), not
+  Deflated Sharpe.
 - Write a regenerable artifact with the headline, stress checks, turnover-cost share,
   drawdown versus buy-and-hold, and caveats.
 
 Pre-registered kill criterion:
 
-- Kill if net-of-cost 2022-plus out-of-sample CPCV-min DSR is below 0.95.
+- Kill if net-of-cost 2022-plus out-of-sample CPCV stress minimum conditional PSR(0) is
+  below 0.95.
 - Kill if max drawdown exceeds 35 percent.
 - Kill if turnover costs consume more than 25 percent of gross edge.
 - Kill if the result only passes by relaxing the 100 percent notional cap.
@@ -160,6 +162,9 @@ to the cash proxy.
 
 ## Status
 
-Accepted. Study 4 becomes the active research track after CTREND's non-viable verdict.
-The next work block is PR6a, a no-fit BTC/ETH trend gate. G10 Micro FX carry is the
-registered backup if the primary dies at the first gate.
+Accepted. PR6a was built from committed BTC/ETH daily OHLC fixtures and returned a
+non-viable verdict: 229 weekly observations, mean net +0.1975 percent per week,
+full-window conditional PSR(0) 0.6970, CPCV stress minimum conditional PSR(0) 0.1439,
+daily max drawdown 26.65 percent, cost share 11.47 percent, and compounded net gain
+43.91 percent. The result is positive and drawdown-reducing, but it fails the statistical
+kill gate. G10 Micro FX carry remains the registered backup.

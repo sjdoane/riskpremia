@@ -124,16 +124,17 @@ class MarkPriceRecord:
 
 @attrs.frozen(slots=True)
 class SpotKlineRecord:
-    """A spot kline: close, high, low, and the quote-asset (USD) dollar volume (ADR 0005).
+    """A spot kline: OHLC and the quote-asset (USD) dollar volume.
 
     The CTREND universe layer (Study 3) reads DAILY spot bars to compute the daily
     technical signals (PR2) and to derive the weekly liquidity rank + returns (PR1).
     `close`/`high`/`low` are the bar close/high/low (high/low feed the stochastic, CCI, and
     Chaikin signals that the close alone cannot compute); `quote_volume` is the Binance
     kline "quote asset volume" (column 7), i.e. the USD(T)-denominated dollar volume
-    directly, with no price * base-volume reconstruction. The bar open is not carried (no
-    CTREND signal needs it). Decimal at the boundary; the single documented Float64 cast
-    happens later at the panel build (mirroring `clock.py`).
+    directly, with no price * base-volume reconstruction. `open` is optional because the
+    earlier CTREND committed panel did not need it; Study 4's executable Monday-open fill
+    requires it and rejects fixtures where it is missing. Decimal at the boundary; the
+    single documented Float64 cast happens later at the panel build (mirroring `clock.py`).
     """
 
     instrument: InstrumentId
@@ -142,6 +143,7 @@ class SpotKlineRecord:
     high: Decimal
     low: Decimal
     quote_volume: Decimal
+    open: Decimal | None = None
 
 
 @attrs.frozen(slots=True)

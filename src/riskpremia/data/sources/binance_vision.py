@@ -58,6 +58,7 @@ _BASE_URL = "https://data.binance.vision"
 _S3_LIST_URL = "https://s3-ap-northeast-1.amazonaws.com/data.binance.vision"
 _S3_NS = "{http://s3.amazonaws.com/doc/2006-03-01/}"
 _KLINE_HIGH_IDX = 2
+_KLINE_OPEN_IDX = 1
 _KLINE_LOW_IDX = 3
 _KLINE_CLOSE_IDX = 4
 _KLINE_CLOSE_TIME_IDX = 6
@@ -294,16 +295,18 @@ class BinanceVisionSource:
             out.append(row.to_record(instrument))
         return out
 
-    def _parse_kline_zip(self, path: Path) -> list[tuple[int, Decimal, Decimal, Decimal, Decimal]]:
-        """Return (close_time_ms, high, low, close, quote_volume) per kline row (header ok).
+    def _parse_kline_zip(
+        self, path: Path
+    ) -> list[tuple[int, Decimal, Decimal, Decimal, Decimal, Decimal]]:
+        """Return (close_time_ms, open, high, low, close, quote_volume) per kline row.
 
+        `open` (column 1) is needed for Study 4's Monday-open executable fill;
         `high`/`low` (columns 2/3) feed the CTREND stochastic/CCI/Chaikin signals; `close`
         is column 4; `quote_volume` is the kline "quote asset volume" (column 7), the
         USD(T)-denominated dollar volume the universe ranks on. The price-only callers
-        (`fetch_marks`, `fetch_spot`) keep only the close by unpacking `(_ms, _h, _l, close,
-        _qv)`; only `fetch_spot_klines` keeps high/low/volume.
+        keep only the close by unpacking the rest; `fetch_spot_klines` keeps OHLC/volume.
         """
-        out: list[tuple[int, Decimal, Decimal, Decimal, Decimal]] = []
+        out: list[tuple[int, Decimal, Decimal, Decimal, Decimal, Decimal]] = []
         for r in csv.reader(StringIO(self._read_single_member(path))):
             if not r or not r[0].lstrip("-").isdigit():
                 continue  # skip a header row (newer Binance Vision klines carry one)
@@ -311,6 +314,7 @@ class BinanceVisionSource:
             out.append(
                 (
                     close_ms,
+                    Decimal(r[_KLINE_OPEN_IDX]),
                     Decimal(r[_KLINE_HIGH_IDX]),
                     Decimal(r[_KLINE_LOW_IDX]),
                     Decimal(r[_KLINE_CLOSE_IDX]),
@@ -345,7 +349,7 @@ class BinanceVisionSource:
             )
             relpath = f"binance_vision/{symbol}/marks/{symbol}-{interval}-{month}.zip"
             path = self._download_and_verify(key, relpath)
-            for close_time_ms, _h, _l, close, _qv in self._parse_kline_zip(path):
+            for close_time_ms, _o, _h, _l, close, _qv in self._parse_kline_zip(path):
                 out.append(
                     MarkPriceRecord(
                         instrument=instrument,
@@ -363,7 +367,7 @@ class BinanceVisionSource:
             key = f"data/spot/monthly/klines/{symbol}/{interval}/{symbol}-{interval}-{month}.zip"
             relpath = f"binance_vision/{symbol}/spot/{symbol}-{interval}-{month}.zip"
             path = self._download_and_verify(key, relpath)
-            for close_time_ms, _h, _l, close, _qv in self._parse_kline_zip(path):
+            for close_time_ms, _o, _h, _l, close, _qv in self._parse_kline_zip(path):
                 out.append(
                     SpotPriceRecord(
                         spot_venue="binance_spot",
@@ -416,7 +420,7 @@ class BinanceVisionSource:
             key = f"data/spot/monthly/klines/{symbol}/{interval}/{symbol}-{interval}-{month}.zip"
             relpath = f"binance_vision/{symbol}/spot/{symbol}-{interval}-{month}.zip"
             path = self._download_and_verify(key, relpath)
-            for close_time_ms, high, low, close, quote_volume in self._parse_kline_zip(path):
+            for close_time_ms, open_, high, low, close, quote_volume in self._parse_kline_zip(path):
                 out.append(
                     SpotKlineRecord(
                         instrument=instrument,
@@ -425,6 +429,7 @@ class BinanceVisionSource:
                         high=high,
                         low=low,
                         quote_volume=quote_volume,
+                        open=open_,
                     )
                 )
         return [r for r in out if start <= r.period_end_ts < end]

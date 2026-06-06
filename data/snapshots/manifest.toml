@@ -50,6 +50,32 @@ rows = 1333
 note = "Committed in-repo reproducibility fixture (date,close), a daily-close extract of the Binance Vision spot klines (BTCUSDT, 1d). Pinned so the headline reproduces offline from a clone; the underlying monthly zips carry their own published checksums."
 
 [[snapshot]]
+name = "btc-eth-daily-ohlc"
+venue = "binance_vision"
+instrument = "BTCUSDT,ETHUSDT"
+kind = "reproducibility_fixture"
+relpath = "tests/data/btc_eth_daily_ohlc.csv"
+source_url = "https://data.binance.vision/data/spot/monthly/klines/BTCUSDT/1d/ and ETHUSDT/1d/"
+fetched_utc = 2026-06-06T08:52:07+00:00
+sha256 = "288282fe4b88ef28a815348d81e17b75da6392f4f563160ecb53abbe306defe1"
+size_bytes = 190485
+rows = 5416
+note = "Committed BTC/ETH daily OHLC fixture for Study 4. The signal forms after Sunday close and fills at Monday open, so both open and close are required. Upstream Binance Vision zip paths, file hashes, and published checksums are recorded in tests/data/btc_eth_daily_ohlc_sources.json."
+
+[[snapshot]]
+name = "btc-eth-daily-ohlc-sources"
+venue = "binance_vision"
+instrument = "BTCUSDT,ETHUSDT"
+kind = "reproducibility_fixture"
+relpath = "tests/data/btc_eth_daily_ohlc_sources.json"
+source_url = "https://data.binance.vision/data/spot/monthly/klines/BTCUSDT/1d/ and ETHUSDT/1d/"
+fetched_utc = 2026-06-06T08:52:07+00:00
+sha256 = "bda7c52c00d40cb2989729fdc0111bc52e189948719892dda09a934b68f7d7e9"
+size_bytes = 57188
+rows = 178
+note = "Committed provenance file listing every Binance Vision monthly spot-kline zip used to build tests/data/btc_eth_daily_ohlc.csv, including each vendor CHECKSUM hash."
+
+[[snapshot]]
 name = "ctrend-daily-panel-usdt"
 venue = "binance_vision"
 instrument = "USDT spot universe (563 coins)"
