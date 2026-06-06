@@ -3,6 +3,72 @@
 What shipped, plus every review finding and its resolution (rule 2). Newest
 first. This is the audit trail; STATUS.md is the current-state snapshot.
 
+## 2026-06-06, session 11: Study 6 pivot, cross-asset defensive trend (pre-registration)
+
+After the Study 5 feasibility kill, a fresh strategy fork selected the next candidate.
+Shipped on `feat/adr-0008-cross-asset-trend-pivot` (docs-only pre-registration before any
+backtest code):
+
+- `docs/decisions/0008-pivot-to-cross-asset-defensive-trend.md`: the decision, the frozen
+  no-fit rule, and the pre-registered kill criterion.
+- `docs/research/0007-cross-asset-trend-feasibility.md`: the candidate survey and the
+  live data-path probe results.
+- README / STATUS pointers so the front door reflects the active study.
+
+**Selection.** A four-lens decision review (realist, quant, builder, growth) and an
+adversarial cross-check surveyed four candidates against live data probes: crypto funding
+dispersion (measurement-only, the deployable capture needs inaccessible altcoin-perp
+shorting), short-horizon reversal and liquidation fades (killed: liquid majors show
+momentum not reversal, the clean liquidation feed is discontinued or paid, the edge needs
+sub-five-minute holds), commodity convenience-yield carry (killed: no free keyless
+curve-shape data, integer micro sizing breaks a small account), and a cross-asset defensive
+trend (selected: it directly repairs Study 4's weakness with genuinely low-correlated
+sleeves while staying long-only, low-turnover, and retail-executable).
+
+**Data-path discipline.** Scraped fund-price endpoints return data only when the client
+spoofs a browser User-Agent (the honest standard-library client gets HTTP 429 on first
+contact) and their terms restrict redistribution, so they were rejected on the exact
+standard that killed Study 5. The accepted path uses openly-redistributable public-domain
+research data (Kenneth French daily factors for US equity total return and the one-month
+bill rate; FRED `DGS10` for the long-Treasury reconstruction; FRED for gold) and implements
+the position through funds with a modeled fund-versus-index basis.
+
+#### Design review of the pre-registration and resolutions
+
+An independent senior-quant design review of the draft ADR returned three blocking findings
+and several refinements; all were resolved in the pre-registration before merge:
+
+- **Critical, power:** a monthly worst-fold CPCV gate is near-unpassable for a modest-Sharpe
+  rule, the same wall as Study 4. Resolution: rebalance monthly but score the daily
+  mark-to-market series, and make the full-sample conditional PSR(0) the principled primary
+  gate for a no-fit rule, with the CPCV worst-fold, the CPCV path-stitched distribution, and
+  the recency slices reported as stress, never as a soft-pedaled headline.
+- **Critical, look-ahead:** the bond total-return formula was unstated. Resolution: the
+  start-of-period-yield constant-maturity formula is written into the ADR verbatim, with
+  `DGS10`, par-coupon, and start-of-period duration and convexity frozen.
+- **Critical, reproducibility:** Kenneth French and FRED are mutable and restate recent data.
+  Resolution: the fixtures are classified as as-of reproducibility fixtures of the derived
+  series, the fetch date is recorded, a hard data end-date of 2026-03-31 is frozen ending two
+  months before the as-of, and the checksum attests tamper-evidence not vendor byte-fidelity.
+- **High, cost:** charging costs only on turnover lets a low-turnover rule escape its real
+  holding drag. Resolution: the annual expense ratio is charged on held notional, accrued
+  daily, with cited fund anchors rounded up, plus a per-side turnover cost.
+- **High, false-pass via cash carry:** earning the bill rate could pass on carry not skill.
+  Resolution: the gate is scored on returns in excess of the one-month bill, with the
+  total-return and zero-yield versions reported as diagnostics.
+- **High, calendar:** the crypto-continuous windowing and the 365-day constant cannot be
+  reused. Resolution: a fresh position-based monthly windowing and 252-day annualization
+  layer; the crypto calendar-walking helper is not reused; the month-end resample and the
+  signal-to-fill timing are frozen.
+- **Medium items:** a Deflated-Sharpe ladder at 8, 16, and 32 trials (not a single optimistic
+  count); fixed one-over-N-of-the-universe weighting (not one-over-N-active renormalization);
+  a strengthened hindsight defense (data-availability universe rule, Faber 2007 anchor,
+  documented exclusions, foreign-equity sensitivity); and explicit embargo and bill-rate
+  point-in-time conventions.
+
+Verification: docs-only pre-registration PR. The implementation and the verdict follow in
+the gate build.
+
 ## 2026-06-06, session 10: CME Micro G6 FX carry feasibility kill
 
 The registered G10 Micro FX backup from ADR 0006 was tested as a feasibility gate before
