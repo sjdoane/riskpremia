@@ -3,6 +3,35 @@
 What shipped, plus every review finding and its resolution (rule 2). Newest
 first. This is the audit trail; STATUS.md is the current-state snapshot.
 
+## 2026-06-06, session 8: post-CTREND strategy fork and ADR 0006
+
+The CTREND null triggered the next pivot. No code changed in this work block. The
+strategy decision was recorded in `docs/decisions/0006-pivot-to-btc-eth-slow-trend.md`,
+and STATUS / README / memory were refreshed to make Study 4 the active track.
+
+Decision: move forward with **BTC/ETH slow trend with cash and a volatility cap**.
+The frozen first milestone is PR6a `btc_eth_trend_gate`: weekly spot-only BTC/ETH
+allocation, 200-day moving-average signal, cash when inactive, equal-risk active
+assets, 25% annualized volatility target, 100% notional cap, and realistic spot costs.
+No leverage, shorts, perps, option legs, or parameter search in the first gate.
+
+Pre-registered kill criterion: kill if net-of-cost 2022+ CPCV-min DSR is below 0.95,
+max drawdown exceeds 35%, turnover costs consume more than 25% of gross edge, or the
+result only passes by relaxing the 100% notional cap. Secondary diagnostics are
+post-ETF 2024+ performance, drawdown reduction versus buy-and-hold BTC/ETH, CAGR
+give-up, and cash-proxy sensitivity.
+
+Why this won: after the funding carry, VRP, and CTREND failures, the next primary
+strategy should not depend on fragmented venues, paid microstructure, short convexity,
+or inaccessible financing. BTC/ETH time-series trend is low-turnover, retail-executable,
+free-data reproducible, and boring in the useful way. It tests whether defensive crypto
+beta timing survives the same deflated net-of-cost gate that killed the prior candidates.
+
+Registered backup if PR6a dies quickly: G10 Micro FX carry with a hard risk-off switch,
+subject first to a free-data gate and a stress-loss gate. The backup is better as a
+diversifying macro research study than as the immediate next build because the August
+2024 yen carry unwind is exactly the failure mode.
+
 ## 2026-06-05, session 7 (CTREND PR3): the net-of-cost gate + verdict
 
 The CTREND study's kill gate is built and the verdict is an honest null. Shipped on

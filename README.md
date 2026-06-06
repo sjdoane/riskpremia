@@ -2,19 +2,27 @@
 
 A reproducible, intellectually-honest **measurement study** of crypto risk premia.
 One apparatus (free, US-reachable, checksum-pinned data; a vendored deflated-Sharpe /
-purged-CPCV / bootstrap stack; a cost-model-first, random-entry-null kill gate) is
-pointed at two distinct premia:
+purged-CPCV / bootstrap stack; a cost-model-first kill gate) is pointed at a sequence
+of candidate premia:
 
 1. **The perpetual funding carry** (Study 1): does a delta-neutral long-spot /
    short-perp book that collects funding survive realistic retail costs? **Result: an
    honest null.** Net-of-cost Deflated Sharpe is ~0 on every US-tradeable venue and
    horizon; the round-trip cost dwarfs the funding and the post-spot-ETF basis decayed.
    Killed cleanly per the pre-registered criterion ([ADR 0003](docs/decisions/0003-cost-model-and-null.md)).
-2. **The variance risk premium** (Study 2, active): implied variance (Deribit DVOL)
-   persistently exceeds subsequently-realized variance in BTC. **Result so far: a real,
-   positive, statistically-significant premium** (the measurement floor, Layer i). Whether
-   a short-variance implementation survives option costs and the crash tail is Layer ii
-   (in progress, pre-registered as a likely cost/peso-bounded null).
+2. **The variance risk premium** (Study 2): implied variance (Deribit DVOL)
+   persistently exceeds subsequently-realized variance in BTC. **Result: a real,
+   positive, statistically-significant measurement premium, but the tradeable monthly
+   short-straddle gate is non-viable** after costs and crash-tail accounting
+   ([ADR 0004](docs/decisions/0004-pivot-to-variance-risk-premium.md)).
+3. **The CTREND crypto cross-sectional trend factor** (Study 3): the gross signal has
+   real rank-IC quality, but the retail long-only top quintile is non-viable after
+   realistic costs, and the academic long-short comparison also fails the conservative
+   CPCV-min DSR gate ([ADR 0005](docs/decisions/0005-pivot-to-ctrend-trend-factor.md)).
+4. **BTC/ETH slow trend with cash and a volatility cap** (Study 4, active): a no-fit,
+   weekly spot-only allocation gate with a frozen 200-day moving-average signal, 25%
+   annualized volatility target, 100% notional cap, and realistic spot costs
+   ([ADR 0006](docs/decisions/0006-pivot-to-btc-eth-slow-trend.md)).
 
 Sibling to [pit-backtest](https://github.com/sjdoane/pit-backtest), whose headline was a
 *reproducible honest momentum null*. The contribution here is the same: cost realism,
@@ -22,12 +30,17 @@ confound controls, a pre-registered kill criterion, and reproducibility, never a
 backtest. An honest null is a success; a blown-up account or an oversold backtest is a
 failure.
 
-> **Status (2026-06-04):** Study 1 killed (on `main`). Study 2 Layer i (the VRP
-> measurement) is built, measured, and committed as a regenerable artifact + figures
-> below; Layer ii (the cost-gated tradeable test) is next. Live state is always in
-> [STATUS.md](STATUS.md).
+> **Status (2026-06-06):** Studies 1, 2 tradeable layer, and 3 are honest nulls.
+> Study 2's measurement layer remains a positive finding. Study 4 is active: PR6a
+> `btc_eth_trend_gate` will test the frozen BTC/ETH slow-trend allocation. Live state
+> is always in [STATUS.md](STATUS.md).
 
-## Study 2 result: the BTC variance risk premium (Layer i, the measurement floor)
+## Study 2 result: the BTC variance risk premium
+
+Layer ii is complete and non-viable: the systematic monthly short straddle netted a
+Deflated Sharpe of 0.30, below the 0.95 bar, with a slightly negative mean and crash
+shocks a retail account could not survive. The measurement layer below remains the
+positive result.
 
 Implied variance (the Deribit DVOL index, squared) minus the matched-horizon realized
 variance (the variance-swap convention, on the Binance Vision spot closes), BTC,
@@ -83,6 +96,14 @@ Each study ships whatever the result is, an honest null included. The criterion 
   crash loss plus peso-adjustment a retail account could not survive, means declare
   non-viable. The measurement floor (Layer i, above) is the primary deliverable either
   way.
+- **Study 3 (CTREND,** [ADR 0005](docs/decisions/0005-pivot-to-ctrend-trend-factor.md)**):**
+  net-of-cost CPCV-min DSR below 0.95 on the 2022+ liquid-universe window means the
+  published cost-survival claim does not hold under the project's realistic retail-cost
+  stress. **Triggered: killed.**
+- **Study 4 (BTC/ETH slow trend,** [ADR 0006](docs/decisions/0006-pivot-to-btc-eth-slow-trend.md)**):**
+  kill if 2022+ net-of-cost CPCV-min DSR is below 0.95, max drawdown exceeds 35%,
+  turnover costs consume more than 25% of gross edge, or the result only passes by
+  relaxing the 100% notional cap.
 
 ## Methodology (the shared discipline)
 
