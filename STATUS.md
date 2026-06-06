@@ -4,7 +4,9 @@ Single source of truth for where Project RiskPremia is and what is deferred.
 Read this FIRST on any new session, then the ADRs it points to. Update after
 every meaningful work block (rule 2).
 
-Last updated: 2026-06-05 (session 7: CTREND PR3 DONE, the net-of-cost backtest + kill gate + verdict, on `feat/ctrend-gate`; design plan + senior-quant design review + post-implementation review per rule 1; retail long-only is a decisive honest null, and the academic long-short comparison also fails the conservative CPCV-min DSR gate).
+Last updated: 2026-06-06 (session 8: CTREND PR3 merged; post-null strategy fork completed; ADR 0006 accepted. Active next study is BTC/ETH slow trend with cash and a volatility cap. Next build: PR6a `btc_eth_trend_gate`, a no-fit gate with 200-day MA, 25% vol target, 100% notional cap, realistic spot costs, and a frozen kill criterion).
+
+**Study 4 (BTC/ETH slow trend, ADR 0006): ACTIVE.** After the CTREND null, five vertical research reviews and an adversarial senior-quant decision review selected a conservative retail-deployable allocation test rather than another execution-fragile premium harvest. The next strategy is a weekly BTC/ETH spot-only trend gate: hold each asset only when the prior close is above its 200-day moving average, otherwise cash; equal-risk active assets; 25% annualized volatility target; 100% notional cap; realistic spot costs; no leverage, shorts, perps, option legs, or parameter search. **Pre-registered kill:** kill if net-of-cost 2022+ CPCV-min DSR is below 0.95, max drawdown exceeds 35%, turnover costs consume more than 25% of gross edge, or the result only passes by relaxing the 100% notional cap. Backup if it dies quickly: G10 Micro FX carry with a hard risk-off switch, subject first to a free-data and stress-loss gate.
 
 **Study 3 (CTREND, ADR 0005): a faithful replication-and-stress of the one peer-reviewed crypto cost-survival claim (Fieberg et al., JFQA 2025) under the project's REALISTIC retail cost model + a 2022-2026 OOS extension + proper deflation. The FIRST FITTED signal in the project (the CPCV + trial-registry + DSR deflation are load-bearing). PR1 the point-in-time multi-coin universe data layer is DONE, PR2 the trend-feature signal + cross-sectional elastic-net aggregation is DONE, and PR3 the backtest + kill gate + verdict is DONE. Verdict: the retail LONG-ONLY top quintile is NON-VIABLE after costs (mean net -0.906%/week, full OOS DSR 0.0034, CPCV-min DSR 0.0031), and the academic LONG-SHORT comparison also fails the conservative CPCV-min DSR gate (mean net +0.197%/week, full OOS DSR 0.225, CPCV-min DSR 0.0035).**
 
@@ -16,27 +18,18 @@ Last updated: 2026-06-05 (session 7: CTREND PR3 DONE, the net-of-cost backtest +
 
 ## One-line state
 
-A reproducible, intellectually-honest MEASUREMENT study of crypto risk premia. Study
-1 (the funding carry) was KILLED honestly (the kill gate, on `main`: net-of-cost
-Deflated Sharpe ~0 on every US-tradeable venue/horizon, an honest null). Per the
-pivot-on-failure rule, **the active study is now the crypto VARIANCE RISK PREMIUM
-(VRP), ADR 0004**, in two layers: (i) a reproducible index-level MEASUREMENT (Deribit
-DVOL implied variance minus realized variance from the Binance Vision klines), and
-(ii) a cost-gated short-variance tradeable test, pre-registered as a likely
-cost/peso-bounded null. **BOTH LAYERS ARE NOW BUILT.** Layer i (the MEASUREMENT,
-PR5a-PR5b): the first measured VRP (BTC, 2022-01..2025-06, 30-day) is mean variance
-premium 0.087, 95% bootstrap CI [0.033, 0.119] CLEARING zero (overlap-honest), 70% of
-days positive, pre-ETF 0.101 -> post-ETF 0.059 (a real, positive, significant premium;
-committed regenerable artifact + figures). **Layer ii (the tradeable test, PR5c-PR5f):
-VERDICT NON-VIABLE, the pre-registered cost/peso-bounded honest null.** A systematic
-monthly short straddle (delta-hedged, held to expiry) over 2022-2025 nets a Deflated
-Sharpe of 0.30 (below the 0.95 bar) with a slightly NEGATIVE mean, and a catastrophic
-inverse-settlement crash tail (the worst in-sample month loses 2.7x the posted margin; a
-cited -50% one-day crash loses 6.1x). The honest conclusion: the VRP is real and
-positive (Layer i), but the static held-to-expiry straddle is a path-blind directional
-bet that does NOT harvest it after costs, and the un-modeled path rehedge + the peso tail
-make it non-viable for retail. The measurement floor is the study's positive headline.
-Repo: https://github.com/sjdoane/riskpremia. PR5f on `feat/vrp-short-variance-gate`.
+A reproducible, intellectually-honest MEASUREMENT study of crypto risk premia, now on
+Study 4. Study 1 (funding carry, ADR 0003) was killed honestly: net-of-cost Deflated
+Sharpe ~0 on every US-tradeable venue and horizon. Study 2 (VRP, ADR 0004) measured a
+real positive BTC variance premium, but the cost-gated monthly short-straddle
+implementation was non-viable after costs and crash-tail accounting. Study 3 (CTREND,
+ADR 0005) found real gross cross-sectional signal quality, but the retail long-only
+top quintile was non-viable after costs and the academic long-short comparison also
+failed the conservative CPCV-min DSR gate. **Active next study: BTC/ETH slow trend with
+cash and a volatility cap (ADR 0006).** Next build: PR6a `btc_eth_trend_gate`, a no-fit
+weekly spot-only allocation gate with 200-day MA, 25% vol target, 100% notional cap,
+realistic spot costs, CPCV-min DSR, drawdown, and turnover-cost kill checks.
+Repo: https://github.com/sjdoane/riskpremia.
 
 ## Dev commands (Windows PowerShell; the venv is run DIRECTLY)
 
@@ -229,8 +222,9 @@ the gate is about REAL-MONEY deployment.
 ## Reading map
 
 ADR 0001 (lead-track decision + the kill criterion), ADR 0002 (the data layer +
-funding clock, incl the PR3 OKX/delta amendment), ADR 0003 (the cost model + null,
-the locked methodology). `docs/research/0001-data-layer-design.md` (the reviewed
-data-layer design). CHANGELOG.md (every review finding + resolution). The
-`project_riskpremia` memory note (cross-session summary). README.md (the
-reviewer-facing front door).
+funding clock, incl the PR3 OKX/delta amendment), ADR 0003 (the cost model + null),
+ADR 0004 (VRP pivot + completed non-viable tradeable gate), ADR 0005 (CTREND pivot +
+completed non-viable gate), ADR 0006 (active BTC/ETH slow-trend pivot).
+`docs/research/0001-data-layer-design.md` (the reviewed data-layer design).
+CHANGELOG.md (every review finding + resolution). The `project_riskpremia` memory
+note (cross-session summary). README.md (the reviewer-facing front door).
