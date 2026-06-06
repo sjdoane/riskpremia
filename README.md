@@ -27,6 +27,12 @@ of candidate premia:
    the exact free historical CME settlement path is not robust enough for a deployable
    futures backtest and USD 10,000 integer-contract stress can fail account survival
    ([ADR 0007](docs/decisions/0007-kill-cme-micro-g6-fx-carry.md)).
+6. **Cross-asset defensive trend** (Study 6): a frozen, no-fit, long-only trend rule across
+   genuinely low-correlated asset classes (US equity, long-term US Treasury, gold) on
+   openly-redistributable public-domain data, scored in excess of the Treasury bill. Selected
+   and pre-registered after a four-lens fork as the deployable swing that repairs Study 4's
+   weakness with integrity; build and verdict pending
+   ([ADR 0008](docs/decisions/0008-pivot-to-cross-asset-defensive-trend.md)).
 
 Sibling to [pit-backtest](https://github.com/sjdoane/pit-backtest), whose headline was a
 *reproducible honest momentum null*. The contribution here is the same: cost realism,
@@ -36,8 +42,9 @@ failure.
 
 > **Status (2026-06-06):** Studies 1, 2 tradeable layer, 3, and 4 are honest nulls.
 > Study 2's measurement layer remains a positive finding. Study 5, the CME Micro G6 FX
-> carry feasibility pass, was killed before implementation. Live state is always in
-> [STATUS.md](STATUS.md).
+> carry feasibility pass, was killed before implementation. Study 6, a cross-asset
+> defensive trend on public-domain data, is selected and pre-registered ([ADR 0008](docs/decisions/0008-pivot-to-cross-asset-defensive-trend.md));
+> the build and verdict follow. Live state is always in [STATUS.md](STATUS.md).
 
 ## Study 2 result: the BTC variance risk premium
 
@@ -156,8 +163,9 @@ every number on its own. Dependencies are pinned to exact patch; mypy runs stric
   (data layer), [0003](docs/decisions/0003-cost-model-and-null.md) (cost model + the carry
   kill), [0004](docs/decisions/0004-pivot-to-variance-risk-premium.md) (the VRP pivot),
   [0005](docs/decisions/0005-pivot-to-ctrend-trend-factor.md) (CTREND), and
-  [0006](docs/decisions/0006-pivot-to-btc-eth-slow-trend.md) (BTC/ETH slow trend), and
-  [0007](docs/decisions/0007-kill-cme-micro-g6-fx-carry.md) (CME Micro G6 FX feasibility).
+  [0006](docs/decisions/0006-pivot-to-btc-eth-slow-trend.md) (BTC/ETH slow trend),
+  [0007](docs/decisions/0007-kill-cme-micro-g6-fx-carry.md) (CME Micro G6 FX feasibility), and
+  [0008](docs/decisions/0008-pivot-to-cross-asset-defensive-trend.md) (cross-asset defensive trend).
 - [CHANGELOG.md](CHANGELOG.md) is the audit trail: every review finding and its resolution.
 
 ## Setup

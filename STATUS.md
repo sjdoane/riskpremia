@@ -4,7 +4,9 @@ Single source of truth for where Project RiskPremia is and what is deferred.
 Read this FIRST on any new session, then the ADRs it points to. Update after
 every meaningful work block (rule 2).
 
-Last updated: 2026-06-06 (session 10: Study 5 CME Micro G6 FX carry feasibility killed before implementation. The registered G10 Micro FX backup is not actually G10 at micro size, the exact free CME settlement-history path is not robust enough for a deployable futures backtest, and CHF-style integer micro sizing can plausibly break a USD 10,000 account).
+Last updated: 2026-06-06 (session 11: Study 6 selected and pre-registered. After a four-lens fork and an adversarial cross-check, the next build is a cross-asset defensive trend rule scored on public-domain data, the one surveyed candidate that repairs Study 4's weakness while staying long-only, low-turnover, retail-executable, and reproducible from free keyless data. The frozen rule and kill criterion are in ADR 0008, with the design-review findings resolved before merge. Implementation and the verdict follow in the gate build).
+
+**Study 6 (cross-asset defensive trend, ADR 0008): SELECTED AND PRE-REGISTERED; build pending.** A frozen, no-fit, monthly, long-or-cash trend rule across genuinely low-correlated asset classes (US equity and the one-month Treasury bill from the Kenneth French daily factors; long-term US Treasury reconstructed from FRED `DGS10`; gold from FRED), implemented through funds with a modeled fund-versus-index basis. Each sleeve is held long only when its total-return index is above its ten-month moving average, else its capital earns the bill; fixed one-over-N-of-universe equal weight; realistic fund costs (expense ratio on held notional plus per-side turnover); the net series is marked to market daily and scored in excess of the bill. The data path was chosen to pass both pre-code feasibility gates with integrity: scraped fund-price endpoints (which need browser-User-Agent spoofing and restrict redistribution) were rejected on the same standard that killed Study 5, in favour of openly-redistributable public-domain research data. Pre-registered kill criterion: full-sample net-of-cost conditional PSR(0) on the daily excess-of-bills series must be at least 0.95, with the purged-CPCV stress distribution, the recency slices, and a Deflated-Sharpe ladder at 8/16/32 trials reported alongside. An independent senior-quant design review of the pre-registration returned three blocking findings (a monthly worst-fold gate is un-passable on power; the bond reconstruction formula was unstated; the French/FRED fixtures are mutable), all resolved in ADR 0008 before merge. Next: build the gate from committed fixtures, run it, and ship the verdict.
 
 **Study 5 (CME Micro G6 FX carry feasibility, ADR 0007): DONE, NON-VIABLE BEFORE IMPLEMENTATION.** The G10 Micro FX backup from ADR 0006 was tested as a pre-code feasibility gate, not a backtest. The honest tradeable scope is CME Micro G6, not G10: micro contracts cover AUD, CAD, CHF, EUR, GBP, and JPY versus USD, while NZD, NOK, and SEK are missing at micro size. The data lane found free spot FX, policy-rate, VIX, and CFTC positioning paths, but the exact free historical CME settlement path is not robust enough for a long-history, scriptable futures backtest; CME routes historical settlement products through DataMine and local direct TCF CSV fetches returned HTTP 403. The stress lane also failed: one short `MSF` loses about USD 2,438 in the January 2015 CHF shock; two to three short CHF funding legs can plausibly hit 49% to 73% of a USD 10,000 account before slippage or liquidation friction. **Verdict:** kill CME Micro G6 FX carry as a deployable RiskPremia strategy before code. A spot-plus-policy-rate FX carry measurement note remains possible, but it is not a tradeable CME Micro verdict. Next step: fresh strategy fork with data and minimum-size stress gates applied before implementation.
 
@@ -31,8 +33,10 @@ failed the conservative CPCV-min DSR gate. Study 4 (BTC/ETH slow trend, ADR 0006
 was positive and drawdown-reducing but non-viable because its CPCV stress minimum
 conditional PSR(0) was 0.1439, below the 0.95 bar. Study 5 (CME Micro G6 FX carry,
 ADR 0007) was killed at feasibility because the exact free futures-settlement data path
-and USD 10,000 integer-contract stress gate failed. **Next step: fresh strategy fork
-before any new implementation.**
+and USD 10,000 integer-contract stress gate failed. Study 6 (cross-asset defensive trend,
+ADR 0008) is selected and pre-registered: a frozen, no-fit, long-only trend rule across
+low-correlated asset classes on public-domain data, the deployable swing that repairs
+Study 4's weakness with integrity. **Next step: build the Study 6 gate and ship the verdict.**
 Repo: https://github.com/sjdoane/riskpremia.
 
 ## Dev commands (Windows PowerShell; the venv is run DIRECTLY)
@@ -238,7 +242,9 @@ ADR 0001 (lead-track decision + the kill criterion), ADR 0002 (the data layer +
 funding clock, incl the PR3 OKX/delta amendment), ADR 0003 (the cost model + null),
 ADR 0004 (VRP pivot + completed non-viable tradeable gate), ADR 0005 (CTREND pivot +
 completed non-viable gate), ADR 0006 (completed BTC/ETH slow-trend pivot +
-non-viable PR6a gate), ADR 0007 (completed CME Micro G6 FX carry feasibility kill).
-`docs/research/0001-data-layer-design.md` (the reviewed data-layer design).
+non-viable PR6a gate), ADR 0007 (completed CME Micro G6 FX carry feasibility kill), ADR 0008
+(cross-asset defensive trend pivot, pre-registered, build pending).
+`docs/research/0001-data-layer-design.md` (the reviewed data-layer design),
+`docs/research/0007-cross-asset-trend-feasibility.md` (the Study 6 candidate survey + data probe).
 CHANGELOG.md (every review finding + resolution). The `project_riskpremia` memory
 note (cross-session summary). README.md (the reviewer-facing front door).
