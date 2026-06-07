@@ -173,3 +173,30 @@ Accepted. The measured object, the method, the significance design, and the hone
 above are pre-registered. The candidate survey, the data-path probe, and the design-review
 findings are in `docs/research/0009-funding-dispersion-measurement-design.md`. The build and the
 measured result follow.
+
+## Implementation amendment (2026-06-07, after the build and post-implementation review)
+
+Two notes record where the build is narrower than the pre-registration above, neither of which
+changes the verdict. Both were raised by the post-implementation review as Medium findings.
+
+1. **The spot-to-perp join was resolved by USDT-symbol-string identity, not by a canonical
+   asset key.** The eligible set from `pit_eligible` is already USDT-quoted spot symbols (for
+   example `BTCUSDT`), and the funding archive is fetched for those exact same symbol strings;
+   the Binance USD-margined perpetual for an asset shares that string, so the join is exact
+   string identity, with no canonical-key mapping and no USDC/BUSD fallback leg. The
+   consequence is a deliberate coverage hole: an asset whose only perp is non-USDT-quoted, or
+   whose perp is prefix-renamed (the 1000x meme perps such as `1000SHIBUSDT` or
+   `1000000MOGUSDT`, whose spot symbol is unprefixed), is dropped rather than matched. This is a
+   conservative understatement of dispersion: it can only narrow the cross-section (drop a coin),
+   never widen it or manufacture a spread. The attrition is not silent: the per-day coverage
+   diagnostic in the artifact reports a mean of 91% (13.6 of 15 eligible coins funded) with a
+   worst day of 73%, so the seam is visible and bounded. A canonical-key join with a quote
+   fallback is recorded as a backlog item should this object ever be revisited for deployment;
+   for a non-deployable measurement at 91% coverage with a published diagnostic, the identity
+   join is acceptable.
+2. **The frozen universe is the top-15 most-liquid perpetuals over 2022 onward** (116
+   ever-eligible symbols across the window), not an unbounded top-N. The top-50 union was 402
+   coins, a heavier fetch dominated by short-lived small caps whose entry and exit add
+   estimator noise to the cross-section; the top-15 over the matured-perp-market window is a
+   clean, bounded, documented liquid universe, and it is recorded in the provenance and the
+   manifest. The decay and the regime split are reported on this fixed universe.

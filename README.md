@@ -37,9 +37,12 @@ of candidate premia:
    rule validated with full rigor, not a novel edge
    ([ADR 0008](docs/decisions/0008-pivot-to-cross-asset-defensive-trend.md)).
 7. **Crypto funding-rate dispersion** (Study 7): a descriptive, explicitly non-deployable
-   measurement of the cross-sectional dispersion of perpetual funding across coins (distinct
-   from Study 1's level carry), on the clean Binance funding archive. Selected and pre-registered
-   after a four-lens fork as a measured object, with no tradeable-Sharpe headline; build pending
+   measurement of the cross-sectional dispersion of perpetual funding across coins (distinct from
+   Study 1's level carry), on the clean Binance funding archive. **Result: the dispersion is real
+   but decaying and non-capturable at retail.** The equal-weight cross-sectional IQR is 0.106
+   annualized (post-spot-ETF 0.091 versus 0.123 before; decay slope -0.013/yr), and the gross
+   high-minus-low sort premium of +0.550 annualized requires shorting a wide alt-perp
+   cross-section US retail cannot access. A measured object with no tradeable-Sharpe headline
    ([ADR 0009](docs/decisions/0009-pivot-to-funding-dispersion-measurement.md)).
 
 Sibling to [pit-backtest](https://github.com/sjdoane/pit-backtest), whose headline was a
@@ -48,13 +51,14 @@ confound controls, a pre-registered kill criterion, and reproducibility, never a
 backtest. An honest null is a success; a blown-up account or an oversold backtest is a
 failure.
 
-> **Status (2026-06-06):** Studies 1, 2 tradeable layer, 3, and 4 are honest nulls, and
+> **Status (2026-06-07):** Studies 1, 2 tradeable layer, 3, and 4 are honest nulls, and
 > Study 5 was a feasibility kill. Study 2's measurement layer remains a positive finding.
 > Study 6, a cross-asset defensive trend on public-domain data, is the first result to clear
 > the deflated full-sample gate: a qualified, regime-dependent pass
 > ([ADR 0008](docs/decisions/0008-pivot-to-cross-asset-defensive-trend.md)). The same gate
 > that rejected five candidates also accepts on the merits. Study 7, a crypto funding-dispersion
-> measurement, is pre-registered
+> measurement, is done: the dispersion is real but decaying and non-capturable at retail, a
+> measured object with no tradeable-Sharpe headline
 > ([ADR 0009](docs/decisions/0009-pivot-to-funding-dispersion-measurement.md)). Live state is
 > always in [STATUS.md](STATUS.md).
 
@@ -98,6 +102,49 @@ python -m scripts.regenerate_xtrend_figures
 python -m scripts.run_xtrend_gate
 # rebuild the committed panel from the live public-domain sources (one-time)
 python -m scripts.build_xtrend_inputs
+```
+
+## Study 7 result: crypto funding-rate dispersion (a measured object, not an edge)
+
+A descriptive measurement, like a volatility surface, not a tradeable verdict. The
+cross-sectional dispersion of perpetual funding across the point-in-time top-15 most-liquid
+coins, each event annualized by its own funding interval and sampled onto a common daily grid,
+2022-01 to 2026-05 (1611 daily observations). The headline is the robust equal-weight
+interquartile range; the gross sort premium is the same object in carry units and is reported
+only to show it is non-capturable.
+
+| Quantity | Value |
+| --- | --- |
+| Equal-weight cross-sectional IQR (full sample) | **0.106** annualized (95% CI [0.092, 0.122]) |
+| Pre-spot-ETF mean to post-spot-ETF mean | **0.123 to 0.091** (difference -0.032, CI [-0.058, -0.008]) |
+| Decay slope | **-0.013/yr** (95% CI [-0.022, -0.004]) |
+| Gross high-minus-low sort premium (secondary, non-capturable) | **+0.550** annualized (95% CI [+0.354, +0.783]) |
+| Coverage (funded / eligible, worst day) | **91%** (13.6 / 15, worst 73%) |
+
+The dispersion is real and large but **decaying** (the regime difference and the slope both have
+confidence intervals that exclude zero on the negative side) and **non-deployable**: capturing
+the spread requires shorting a wide altcoin-perp cross-section that US retail cannot access, on a
+venue (Binance) that is not US-tradeable. No tradeable Sharpe is quoted anywhere, by design. The
+significance is the vendored stationary-block bootstrap on the full daily series, with a
+block-deflated effective sample size; a level is positive by construction, so the tested
+statements are the signed regime difference and the decay slope, never a vacuous clears-zero
+test. Detail and the post-implementation review are in
+[docs/research/0010](docs/research/0010-funding-dispersion-measurement-result.md).
+
+![Cross-sectional perpetual-funding dispersion (equal-weight IQR, annualized)](docs/figures/funding_dispersion_iqr.png)
+
+![Gross high-minus-low funding sort premium (secondary, non-capturable)](docs/figures/funding_dispersion_sort_premium.png)
+
+The numbers and figures regenerate from a committed series and JSON artifact, no data bundle
+needed for the no-network steps:
+
+```powershell
+# render the figures from the committed series + artifact (needs the figures extra)
+python -m scripts.regenerate_dispersion_figures
+# rebuild the artifact from the committed series (no network)
+python -m scripts.run_dispersion_measurement
+# rebuild the committed series from the live Binance Vision funding archive (one-time)
+python -m scripts.build_dispersion_inputs
 ```
 
 ## Study 2 result: the BTC variance risk premium

@@ -1,7 +1,7 @@
 [project]
 name = "riskpremia"
 version = "0.0.0"
-description = "A reproducible, intellectually-honest study of crypto and macro risk premia, sibling to pit-backtest. Funding carry, VRP tradeability, CTREND, BTC/ETH slow trend, and CME Micro G6 FX feasibility are honest nulls; a cross-asset defensive trend is a qualified pass of the deflated gate; crypto funding dispersion is a measurement study."
+description = "A reproducible, intellectually-honest study of crypto and macro risk premia, sibling to pit-backtest. Funding carry, VRP tradeability, CTREND, BTC/ETH slow trend, and CME Micro G6 FX feasibility are honest nulls; a cross-asset defensive trend is a qualified pass of the deflated gate; crypto funding dispersion is measured as a real-but-decaying, non-deployable object."
 readme = "README.md"
 requires-python = ">=3.11,<3.13"
 license = { file = "LICENSE" }

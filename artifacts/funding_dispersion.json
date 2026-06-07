@@ -1,0 +1,68 @@
+{
+  "caveats": [
+    "This is a descriptive measurement (like a volatility surface), explicitly NOT a tradeable verdict and NOT a positive result in the make-money sense.",
+    "Non-deployable: capturing the cross-sectional funding spread requires shorting a wide altcoin-perp cross-section, which US retail cannot access, on a venue (Binance) that is not US-tradeable. No tradeable Sharpe is quoted.",
+    "Each funding event is annualized by its own funding interval (basis 365 times 24) before any cross-sectional comparison, so the dispersion is not a units artifact; 4-hour and 8-hour settlements are aligned onto a common daily grid by a point-in-time carry-forward.",
+    "The headline is the equal-weight cross-sectional interquartile range (robust to small-cap tails); the standard deviation and the gross high-minus-low sort premium are secondary diagnostics. The universe is the point-in-time liquid spot set; not every eligible coin has a perp funding series, so a per-day coverage ratio is reported."
+  ],
+  "coverage": {
+    "mean_coverage_ratio": 0.9075522449824125,
+    "mean_n_eligible": 15.0,
+    "mean_n_funded": 13.613283674736188,
+    "min_coverage_ratio": 0.7333333333333333
+  },
+  "data_end": "2026-05-31",
+  "data_start": "2022-01-02",
+  "fingerprint": {
+    "n_series_rows": 1611,
+    "provenance_relpath": "tests/data/funding_dispersion_sources.json",
+    "provenance_sha256": "6c4396ba76ba40f61d5e981cd9b9bbd00eed87b10ae63798d017878f60cbb191",
+    "series_relpath": "tests/data/funding_dispersion_series.csv",
+    "series_sha256": "6f2e2c4c5db82187d41221333f118fc3a3cb45d2088855694da2fefab46a9f01"
+  },
+  "headline": "Cross-sectional funding dispersion is alive but decaying and non-deployable: post-ETF equal-weight IQR 0.091 vs pre-ETF 0.123 annualized (difference -0.032, 95% CI [-0.058, -0.008]); decay slope -0.013/yr (95% CI [-0.022, -0.004]). Gross high-minus-low sort premium 0.550 annualized, not retail-capturable.",
+  "iqr_decay": {
+    "ci_high": -0.0039778421566849876,
+    "ci_low": -0.022498223771882753,
+    "slope_per_year": -0.013379387868346738
+  },
+  "iqr_full": {
+    "block_length": 56.773249885275746,
+    "ci_high": 0.12185800394029328,
+    "ci_low": 0.09194660543121508,
+    "effective_t": 28,
+    "label": "equity_weight_iqr",
+    "mean": 0.10568702783985102,
+    "raw_t": 1611
+  },
+  "iqr_regime": {
+    "diff_ci_high": -0.008053457797679728,
+    "diff_ci_low": -0.05795802553646671,
+    "difference": -0.03191895211577912,
+    "n_post": 872,
+    "n_pre": 739,
+    "post_mean": 0.09104512491399083,
+    "pre_mean": 0.12296407702976996
+  },
+  "knobs": {
+    "bootstrap_seed": 20260607,
+    "ci_alpha": 0.05,
+    "decay_plot_window_days": 90,
+    "n_boot": 2000,
+    "spot_etf": "2024-01-11"
+  },
+  "n_days": 1611,
+  "schema_version": 1,
+  "sort_premium": {
+    "block_length": 30.583928425884466,
+    "ci_high": 0.7832313835221273,
+    "ci_low": 0.3544004968610248,
+    "effective_t": 52,
+    "label": "gross_sort_premium",
+    "mean": 0.550257161257764,
+    "raw_t": 1610
+  },
+  "std_full_mean": 0.38960106229762387,
+  "study": "Crypto funding-rate dispersion measurement (Study 7, ADR 0009)",
+  "winsor_std_full_mean": 0.20018460455146597
+}

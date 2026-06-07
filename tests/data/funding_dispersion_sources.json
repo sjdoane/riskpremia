@@ -1,0 +1,14 @@
+{
+  "provenance": {
+    "ctrend_panel_content_sha256": "e4c84034b1e79503ae3d82083d1e9e88ea9233ea065e0793f1c5fb85a0dc72d0",
+    "ctrend_panel_relpath": "tests/data/ctrend_daily_panel_usdt.csv.gz",
+    "fetched_utc": "2026-06-07T08:53:16+00:00",
+    "funding_source_url": "https://data.binance.vision/data/futures/um/monthly/fundingRate/",
+    "max_gap_days": 3,
+    "n_coins_fetched": 109,
+    "n_quantiles": 5,
+    "top_n": 15,
+    "winsor_pct": 0.05
+  },
+  "schema_version": 1
+}

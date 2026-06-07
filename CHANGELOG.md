@@ -3,6 +3,66 @@
 What shipped, plus every review finding and its resolution (rule 2). Newest
 first. This is the audit trail; STATUS.md is the current-state snapshot.
 
+## 2026-06-07, session 14: Study 7 build, the crypto funding-dispersion measurement
+
+The measurement pre-registered in ADR 0009 is implemented, run, and shipped with figures on
+`feat/funding-dispersion-gate`.
+
+- `src/riskpremia/dispersion/`: `measure.py` (per-event interval annualization single-sourced to
+  `CRYPTO_ANNUALIZATION_DAYS`, the point-in-time common-grid carry-forward, the equal-weight
+  cross-sectional IQR + std + winsorized std + the gross quintile sort premium), `artifact.py`
+  (the stationary-block-bootstrap-CI artifact: the IQR level + the pre/post-ETF regime split +
+  the decay slope + the secondary sort premium + the coverage and the fingerprint + the caveats),
+  `fixtures.py` (the committed daily series + the provenance), `figures.py` (render-only, the
+  `figures` extra, lazy Agg), `errors.py`.
+- `scripts/build_dispersion_inputs.py` (network, one-time): reads point-in-time eligibility from
+  the committed CTREND panel, fetches the per-coin perpetual funding across the top-15 2022+
+  universe from the Binance Vision archive, builds the daily dispersion series, and writes the
+  committed fixture + provenance + manifest stamp. `scripts/run_dispersion_measurement.py`
+  (no-network): committed series to committed artifact. `scripts/regenerate_dispersion_figures.py`:
+  renders the two figures from the committed series + artifact.
+- Committed outputs: `tests/data/funding_dispersion_series.csv` (1611 rows, SHA-stamped),
+  `tests/data/funding_dispersion_sources.json`, `artifacts/funding_dispersion.json`,
+  `docs/figures/funding_dispersion_{iqr,sort_premium}.png`, manifest entries.
+- Tests: `tests/unit/test_dispersion_measure.py` (the annualization, the robust statistics, the
+  carry-forward, the coverage), `tests/unit/test_dispersion_reproduces.py` (the offline fixture
+  reproduces the artifact + tamper-evidence + the non-deployable-framing assertion),
+  `tests/unit/test_dispersion_figures.py` (skipif matplotlib). 278 offline pass.
+- `docs/research/0010-funding-dispersion-measurement-result.md`: the measured result note.
+  README / STATUS / pyproject updated.
+
+**Result (1611 daily obs, 2022-01-02 to 2026-05-31, the top-15 point-in-time liquid universe):**
+the equal-weight cross-sectional funding IQR is 0.106 annualized (95% CI [0.092, 0.122], eff T
+28); the dispersion is alive but DECAYING (post-ETF 0.091 versus pre-ETF 0.123, difference
+-0.032 with 95% CI [-0.058, -0.008]; decay slope -0.013/yr with 95% CI [-0.022, -0.004]) and
+NON-DEPLOYABLE (the secondary gross high-minus-low sort premium is +0.550 annualized with 95% CI
+[+0.354, +0.783], not retail-capturable). Secondary raw std 0.390, winsorized 0.200; coverage
+mean 13.6 of 15 eligible funded (91%, worst day 73%). A descriptive measured object, not a
+"positive result" in the make-money sense, with no tradeable Sharpe quoted anywhere.
+
+#### Post-implementation review and resolutions
+
+An adversarial post-implementation review returned a SHIP verdict with no Critical or High
+findings: it reproduced every headline number from the committed fixture to the digit and
+confirmed the bootstrap runs on the FULL (un-strided) daily series as pre-registered. Two Medium
+findings, both resolved:
+
+- **Medium 1, the spot-to-perp join:** the build resolves the perp leg by USDT-symbol-string
+  identity, not the canonical-key mapping the pre-registration described; there is no USDC/BUSD
+  fallback, so prefix-renamed and non-USDT-only perps (the 1000x meme perps) fall into the
+  coverage hole by design. This can only narrow the cross-section, never widen it, so it is a
+  conservative understatement, and the 91% coverage diagnostic (worst day 73%) makes the
+  attrition visible. Resolution: documented in the ADR 0009 implementation-amendment footer and
+  in research note 0010; a canonical-key join with a quote fallback is a deployment-only backlog
+  item.
+- **Medium 2, the decay knob naming:** the 90-day rolling window is a figure smoother only (the
+  headline slope is OLS on the raw daily series), but it was named as if it drove the decay.
+  Resolution: renamed `DECAY_WINDOW_DAYS` to `DECAY_PLOT_WINDOW_DAYS` and the artifact knob
+  `decay_window_days` to `decay_plot_window_days`, read by the figures; the artifact and figures
+  were regenerated.
+
+Verification: 278 offline pass, mypy strict clean (81 source files), ruff clean, em-dash clean.
+
 ## 2026-06-07, session 13: Study 7 pivot, crypto funding-dispersion measurement (pre-registration)
 
 After the Study 6 qualified pass, a fresh fork selected Study 7. Shipped on
