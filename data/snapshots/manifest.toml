@@ -102,6 +102,32 @@ rows = 1247
 note = "Committed in-repo reproducibility fixture (date,dvol_close). DVOL is a live/as-of series with no published checksum; this SHA256 attests tamper-evidence of the committed daily closes, not vendor byte-fidelity. Regenerate via scripts/build_vrp_artifact.py."
 
 [[snapshot]]
+name = "funding-dispersion-series"
+venue = "binance_vision"
+instrument = "perp-funding-top15-cross-section"
+kind = "reproducibility_fixture"
+relpath = "tests/data/funding_dispersion_series.csv"
+source_url = "https://data.binance.vision/data/futures/um/monthly/fundingRate/"
+fetched_utc = 2026-06-07T08:53:16+00:00
+sha256 = "6f2e2c4c5db82187d41221333f118fc3a3cb45d2088855694da2fefab46a9f01"
+size_bytes = 135888
+rows = 1611
+note = "Committed daily cross-sectional funding-dispersion series for Study 7: equal-weight IQR, std, winsorized std, and the gross high-minus-low sort premium of annualized perpetual funding over the point-in-time top-N liquid universe. As-of snapshot; the SHA256 attests tamper-evidence of the committed series, not vendor byte-fidelity. The raw funding is the checksummed Binance Vision archive."
+
+[[snapshot]]
+name = "funding-dispersion-sources"
+venue = "binance_vision"
+instrument = "perp-funding-top15-cross-section"
+kind = "reproducibility_fixture"
+relpath = "tests/data/funding_dispersion_sources.json"
+source_url = "https://data.binance.vision/data/futures/um/monthly/fundingRate/"
+fetched_utc = 2026-06-07T08:53:16+00:00
+sha256 = "6c4396ba76ba40f61d5e981cd9b9bbd00eed87b10ae63798d017878f60cbb191"
+size_bytes = 480
+rows = 1
+note = "Committed provenance for tests/data/funding_dispersion_series.csv: the CTREND panel hash used for eligibility, the funding source, the build parameters, and the fetch date."
+
+[[snapshot]]
 name = "vrp-straddle-entries"
 venue = "tardis"
 instrument = "BTCUSDT"
