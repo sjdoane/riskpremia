@@ -4,7 +4,9 @@ Single source of truth for where Project RiskPremia is and what is deferred.
 Read this FIRST on any new session, then the ADRs it points to. Update after
 every meaningful work block (rule 2).
 
-Last updated: 2026-06-06 (session 12: Study 6 built and returns the project's FIRST QUALIFIED PASS. The cross-asset defensive trend rule clears the pre-registered deflated full-sample gate (conditional PSR(0) 0.9996, monthly 0.9970, Deflated Sharpe 0.998 at 32 trials), with an 11.2% max drawdown and a 2.8% cost share, but is regime-dependent (CPCV worst fold 0.72, 2022-onward recency 0.40). An adversarial post-implementation review reproduced the headline to the digit and disproved the daily-autocorrelation false-pass hypothesis. Built on clean public-domain data with integrity intact).
+Last updated: 2026-06-07 (session 13: Study 7 selected and pre-registered. After Study 6's qualified pass, a four-lens fork plus an adversarial cross-check selected a crypto funding-dispersion MEASUREMENT study (the registered backup, distinct from Study 1's level carry), over a likely-null deployable swing. ADR 0009 pre-registers the measured object, the spot-to-perp join, the per-event interval annualization, the common-grid sampling, the equal-weight IQR headline, and strict no-oversell guardrails; a design review returned 3 Critical + 4 High + 5 Medium findings, all resolved before merge. Build follows. Study 6 figures shipped in session 12 as PR #23, merged).
+
+**Study 7 (crypto funding-dispersion measurement, ADR 0009): SELECTED AND PRE-REGISTERED; build pending.** A descriptive measurement (like a volatility surface), NOT a deployable verdict and NOT a "positive result" in the make-money sense: it documents that the cross-sectional dispersion of perpetual funding across coins is large but decaying and non-capturable at retail. Method (frozen): the point-in-time eligible SPOT universe (CTREND `pit_eligible`) joined to one perp funding series per coin on the canonical key (the spine ranks spot, funding is perp), per-event annualization via each event's `funding_interval_hours` (single-sourced to `CRYPTO_ANNUALIZATION_DAYS`, basis 8760), a fixed common daily grid by point-in-time carry-forward (so 4h vs 8h settlements do not manufacture dispersion), an equal-weight cross-sectional IQR headline (robust to small-cap tails) with a stationary-block-bootstrap CI on the FULL series, the pre/post-ETF difference, and a rolling decay slope; the gross quintile sort premium is a secondary banner-attached non-capturable object. Guardrails: no tradeable-Sharpe headline, an explicit non-deployability banner, the decay stated in the headline. Gate 1 (data) PASSES (Binance Vision funding archive: 816 coins, checksummed, survivorship-complete, loaders + funding clock + universe spine reusable); Gate 2 (stress) N/A (no position). Considered-and-deferred: a volatility-managed stock/bond swing (contested OOS, the registered next deployable option). Detail in `docs/research/0009-funding-dispersion-measurement-design.md`. Next: build the measurement from committed fixtures, run it, ship the verdict + figures.
 
 **Study 6 (cross-asset defensive trend, ADR 0008): DONE, QUALIFIED PASS (the first deployable result).** A frozen, no-fit, monthly, long-or-cash trend rule across US equity and long-term US Treasury (with the one-month bill as cash), each sleeve held long only when its total-return index is above its ten-month moving average, else in the bill; fixed one-over-N-of-universe equal weight; realistic fund costs (expense ratio on held notional plus per-side turnover); the net series marked to market daily and scored in excess of the bill. Data is openly-redistributable public-domain research data (Kenneth French daily factors for US equity total return and the one-month bill; the US Treasury par yield curve for the ten-year, the original source of FRED `DGS10`); scraped fund-price endpoints were rejected (browser-User-Agent spoofing + redistribution-restricted, the Study-5 standard). Gold was dropped (no clean public-domain price path; ADR 0008 pre-registered fallback). **Result (1990-2026, 8843 daily obs, 425 months): full-sample conditional PSR(0) 0.9996, monthly non-overlapping 0.9970, Deflated Sharpe 0.999/0.999/0.998 at 8/16/32 trials, max drawdown 11.2%, cost share 2.8%, CAGR 7.1%, net excess gain 360.6%. PASSES the primary gate, but REGIME-DEPENDENT: CPCV worst fold 0.7216, 2022-onward recency 0.4016. Per-sleeve attribution: equity standalone 0.9981 (the workhorse), long-Treasury standalone 0.8456 (fails its own gate, drives the recent-regime weakness).** Honest qualified pass on a classic rule, not a novel edge; the contribution is the reproducible deflated validation on clean data. The committed artifact is `artifacts/xtrend_gate.json`; the design + reviews are in `docs/research/0008-cross-asset-trend-gate-design.md`. Pre-build design review (3 blocking findings) and an adversarial post-implementation review (reproduced to the digit; disproved the false-pass hypothesis; two medium honesty findings resolved by adding the monthly PSR + the per-sleeve attribution to the artifact) per rule 1. Next: optional recruiter-facing figures; otherwise a fresh fork (the registered backup is the crypto funding-dispersion measurement note).
 
@@ -38,10 +40,11 @@ ADR 0008) is the project's FIRST QUALIFIED PASS: a frozen, no-fit, long-only sto
 trend rule into T-bills on clean public-domain data clears the deflated full-sample gate
 (conditional PSR(0) 0.9996, monthly 0.9970, Deflated Sharpe 0.998 at 32 trials, 11.2% max
 drawdown, 2.8% cost share), but is regime-dependent (CPCV worst fold 0.72, 2022-onward 0.40;
-equity-trend-driven, the bond sleeve is the weak part). An honest qualified pass on a classic
-rule, reproduced to the digit by an adversarial post-implementation review.
-**Next step: optional recruiter figures, or a fresh fork (backup: a crypto funding-dispersion
-measurement note).**
+equity-trend-driven, the bond sleeve is the weak part); its figures shipped in session 12.
+Study 7 (crypto funding-dispersion measurement, ADR 0009) is selected and pre-registered: a
+descriptive, explicitly non-deployable measurement of the cross-sectional funding-dispersion
+premium (distinct from Study 1's level carry), on the clean Binance funding archive.
+**Next step: build the Study 7 measurement and ship the verdict.**
 Repo: https://github.com/sjdoane/riskpremia.
 
 ## Dev commands (Windows PowerShell; the venv is run DIRECTLY)
@@ -251,9 +254,11 @@ funding clock, incl the PR3 OKX/delta amendment), ADR 0003 (the cost model + nul
 ADR 0004 (VRP pivot + completed non-viable tradeable gate), ADR 0005 (CTREND pivot +
 completed non-viable gate), ADR 0006 (completed BTC/ETH slow-trend pivot +
 non-viable PR6a gate), ADR 0007 (completed CME Micro G6 FX carry feasibility kill), ADR 0008
-(cross-asset defensive trend pivot, pre-registered, build pending).
+(cross-asset defensive trend, the qualified pass), ADR 0009 (crypto funding-dispersion
+measurement pivot, pre-registered, build pending).
 `docs/research/0001-data-layer-design.md` (the reviewed data-layer design),
 `docs/research/0007-cross-asset-trend-feasibility.md` (the Study 6 candidate survey + data probe),
-`docs/research/0008-cross-asset-trend-gate-design.md` (the Study 6 gate design, result, and reviews).
+`docs/research/0008-cross-asset-trend-gate-design.md` (the Study 6 gate design, result, and reviews),
+`docs/research/0009-funding-dispersion-measurement-design.md` (the Study 7 fork, data probe, method, and review).
 CHANGELOG.md (every review finding + resolution). The `project_riskpremia` memory
 note (cross-session summary). README.md (the reviewer-facing front door).
