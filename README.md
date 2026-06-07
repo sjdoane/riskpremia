@@ -51,6 +51,48 @@ failure.
 > that rejected five candidates also accepts on the merits. Live state is always in
 > [STATUS.md](STATUS.md).
 
+## Study 6 result: a cross-asset defensive trend (the first qualified pass)
+
+The first candidate to clear the deflated full-sample gate. A frozen, no-fit, monthly,
+long-or-cash trend across US equity and long-term US Treasury, parking in Treasury bills when
+a sleeve is below its ten-month moving average, on openly-redistributable public-domain data
+(the Kenneth French daily factors and the US Treasury par yield curve), 1990 to 2026, scored
+in excess of the bill.
+
+| Quantity | Value |
+| --- | --- |
+| Full-sample conditional PSR(0) | **0.9996** (clears the 0.95 bar) |
+| Monthly non-overlapping conditional PSR(0) | **0.9970** (the honest independent unit) |
+| Deflated Sharpe at 8 / 16 / 32 inherited trials | **0.999 / 0.999 / 0.998** |
+| Max drawdown / cost share / CAGR | **11.2% / 2.8% / 7.1%** |
+| CPCV worst fold / 2022-onward recency | **0.72 / 0.40** (the regime stress) |
+| Equity sleeve alone / long-Treasury alone | **0.998 / 0.846** |
+
+This is an honest **qualified** pass, not a clean one. The strategy is a classic cross-asset
+trend rule, so the contribution is the reproducible, deflated, net-of-cost validation on clean
+data, not a novel edge. It passes the full-sample and monthly gates and survives
+multiple-testing deflation, with a low drawdown and negligible costs, but it is
+regime-dependent: the worst CPCV fold and the 2022-onward slice are below the bar. The
+per-sleeve attribution locates the risk: the equity trend sleeve carries the result (and
+survives 2022-onward), while the long-Treasury sleeve is weaker on its own and drives the
+recent weakness (the rate-driven bond drawdown).
+
+![Cross-asset defensive trend net wealth and drawdown](docs/figures/xtrend_equity.png)
+
+![Conditional PSR(0) by window and sleeve, against the 0.95 bar](docs/figures/xtrend_gate_scorecard.png)
+
+The numbers and figures regenerate from a committed JSON artifact
+([artifacts/xtrend_gate.json](artifacts/xtrend_gate.json)) with no data bundle:
+
+```powershell
+# render the figures from the committed artifact (needs the figures extra)
+python -m scripts.regenerate_xtrend_figures
+# rebuild the gate artifact from the committed panel (no network)
+python -m scripts.run_xtrend_gate
+# rebuild the committed panel from the live public-domain sources (one-time)
+python -m scripts.build_xtrend_inputs
+```
+
 ## Study 2 result: the BTC variance risk premium
 
 Layer ii is complete and non-viable: the systematic monthly short straddle netted a
