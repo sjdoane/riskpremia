@@ -44,6 +44,14 @@ of candidate premia:
    high-minus-low sort premium of +0.550 annualized requires shorting a wide alt-perp
    cross-section US retail cannot access. A measured object with no tradeable-Sharpe headline
    ([ADR 0009](docs/decisions/0009-pivot-to-funding-dispersion-measurement.md)).
+8. **Volatility-managed market portfolio** (Study 8): a retail-deployable swing that adjudicates
+   the contested volatility-managed claim (Moreira-Muir 2017 positive vs Cederburg et al. 2020
+   and Barroso-Detzel 2020 negative out-of-sample net of cost) on the project's deflated
+   net-of-cost gate, on the clean Kenneth French data already in the repo. Scoped to the managed
+   market (the lone documented cost-survivor) and scored managed-minus-unmanaged, so the result
+   is defensible regardless of sign; the predicted market-survives, factors-die asymmetry is a
+   pre-registered secondary. Selected after a four-lens fork; build pending
+   ([ADR 0010](docs/decisions/0010-pivot-to-volatility-managed-equity.md)).
 
 Sibling to [pit-backtest](https://github.com/sjdoane/pit-backtest), whose headline was a
 *reproducible honest momentum null*. The contribution here is the same: cost realism,
@@ -59,7 +67,10 @@ failure.
 > that rejected five candidates also accepts on the merits. Study 7, a crypto funding-dispersion
 > measurement, is done: the dispersion is real but decaying and non-capturable at retail, a
 > measured object with no tradeable-Sharpe headline
-> ([ADR 0009](docs/decisions/0009-pivot-to-funding-dispersion-measurement.md)). Live state is
+> ([ADR 0009](docs/decisions/0009-pivot-to-funding-dispersion-measurement.md)). Study 8, a
+> volatility-managed market portfolio that adjudicates the contested Moreira-Muir claim on the
+> deflated net-of-cost gate, is pre-registered
+> ([ADR 0010](docs/decisions/0010-pivot-to-volatility-managed-equity.md)). Live state is
 > always in [STATUS.md](STATUS.md).
 
 ## Study 6 result: a cross-asset defensive trend (the first qualified pass)

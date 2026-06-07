@@ -3,6 +3,52 @@
 What shipped, plus every review finding and its resolution (rule 2). Newest
 first. This is the audit trail; STATUS.md is the current-state snapshot.
 
+## 2026-06-07, session 15: Study 8 pivot, a volatility-managed market portfolio (pre-registration)
+
+After the Study 7 merge (PR #25), a fresh fork selected Study 8. Shipped docs-only (pivot
+pre-registration before any code):
+
+- `docs/decisions/0010-pivot-to-volatility-managed-equity.md`: the decision, the frozen signal
+  and method, the gate design, the significance design, the honesty guardrails, and the two
+  pre-code feasibility gates.
+- `docs/research/0011-volatility-managed-equity-design.md`: the candidate survey, the four-lens
+  and adversarial findings, the literature check, and the data-path verification.
+- README / STATUS / pyproject pointers.
+
+**Selection.** A four-lens decision review (realist, quant, builder, growth) and an adversarial
+cross-check were run as five independent reviews over a shortlist (a volatility-managed equity
+strategy, industry/sector momentum, and open alternatives). All five agreed Study 8 should be a
+deployable swing, not a third measurement. The volatility-managed market won on the quant lens's
+sharpening: the published record (Cederburg et al. 2020; Barroso-Detzel 2020; DeMiguel et al.
+2024) is decisive that volatility-managed factors fail out-of-sample net of cost, but the managed
+market is the lone documented survivor, so scoping the study to the managed market and scoring it
+as a direct managed-versus-unmanaged test yields a result defensible regardless of sign, with the
+predicted market-survives, factors-die asymmetry pre-registered as a secondary. The build is the
+smallest of the candidates (the data is already committed for Study 6 and roughly ninety percent
+of the Study 6 gate reuses), and it adjudicates a live top-journal debate (the growth lens). The
+adversarial pick (industry/sector momentum) is recorded as the registered backup.
+
+**Adversarial objections and resolutions.** The cross-check argued for industry momentum and
+raised two real objections, both answered by the scope and the pre-registration:
+
+- **Redundancy with Study 6** (both long equity, de-risked on a signal, into bills): the signal
+  is volatility timing, not the price trend of Study 6; the two are near-orthogonal and the
+  managed-versus-Study-6 return correlation is reported so the distinctness is shown, not assumed.
+- **Researcher degrees of freedom** (the variance window, the leverage cap, the rebalance): all
+  frozen in ADR 0010 before any code (a single previous-month realized-variance estimator, the
+  Moreira-Muir c-normalization that removes the free-leverage confound, a single primary leverage
+  cap, a single rebalance), with the comparison framed as managed-versus-unmanaged rather than the
+  Cederburg-unstable spanning regression, and the leverage-cap sensitivities reported as stress.
+
+**Feasibility gates (PASS).** Gate 1 (data) is pre-cleared: the Kenneth French daily `Mkt-RF` and
+`RF` are already committed and SHA256-stamped for Study 6, so the primary needs no new data, and
+the secondary factors come from the same openly-redistributed Kenneth French library and loader
+family. Gate 2 (stress): the deployable implementation is a leveraged-ETF-or-cash split with no
+short leg, no margin account, and no inaccessible financing, so a minimum practical position
+cannot destroy a small account.
+
+Verification: docs-only pivot pre-registration. The implementation and the measured result follow.
+
 ## 2026-06-07, session 14: Study 7 build, the crypto funding-dispersion measurement
 
 The measurement pre-registered in ADR 0009 is implemented, run, and shipped with figures on
