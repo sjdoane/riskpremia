@@ -3,6 +3,61 @@
 What shipped, plus every review finding and its resolution (rule 2). Newest
 first. This is the audit trail; STATUS.md is the current-state snapshot.
 
+## 2026-06-07, session 13: Study 7 pivot, crypto funding-dispersion measurement (pre-registration)
+
+After the Study 6 qualified pass, a fresh fork selected Study 7. Shipped on
+`feat/adr-0009-funding-dispersion-pivot` (docs-only pre-registration before any code):
+
+- `docs/decisions/0009-pivot-to-funding-dispersion-measurement.md`: the decision, the frozen
+  measured object and method, the significance design, and the honesty guardrails.
+- `docs/research/0009-funding-dispersion-measurement-design.md`: the candidate survey, the live
+  data probe, and the design-review findings.
+- README / STATUS / pyproject pointers.
+
+**Selection.** A four-lens decision review favoured a measurement; an adversarial cross-check
+pushed for a second deployable swing. The measurement won: the clean-data deployable space is
+thin (the cleanest candidate, a volatility-managed portfolio, is contested out-of-sample by
+name, a likely null; the others rhyme with Study 6 or the failed CTREND, or need shorting), so
+after a qualified pass another likely-null swing adds little, whereas the funding dispersion is
+a real, distinct (versus Study 1's level carry), reproducibly-measurable, crypto-native object.
+It is framed as a descriptive measurement, explicitly non-deployable and decaying, not a
+"positive result."
+
+**Data gate (PASS).** The Binance Vision funding archive was probed directly: 816 perpetual
+funding series, BTC history 2020-01 to 2026-05, published per-file checksums verifying
+byte-for-byte, delisted contracts persisting with a frozen end-date (survivorship-complete).
+The stdlib funding loader, the funding clock, and the point-in-time universe spine are reusable.
+The stress gate is not applicable (a measurement carries no position).
+
+#### Design review of the pre-registration and resolutions
+
+An independent senior-quant design review returned three Critical, four High, and five Medium
+findings (the risk for a measurement note is mis-measurement or oversell, not a false pass), all
+resolved before merge:
+
+- **Critical 1, the spot-to-perp join:** the universe spine ranks SPOT symbols while funding is
+  PERP, joined on a key the spine does not treat as a join key. Resolution: an explicit canonical
+  join (eligible spot set, map to canonical, select one perp leg preferring USDT) plus a per-week
+  eligible-versus-funded coverage diagnostic.
+- **Critical 2, the undefined headline:** dispersion (a positive-by-construction spread) and the
+  gross sort premium (a signed return) are different objects. Resolution: the single headline is
+  the equal-weight cross-sectional interquartile-range level with its regime split and decay; the
+  sort premium is secondary and banner-attached.
+- **Critical 3, the bootstrap design:** the VRP striding removes a window-overlap a dispersion
+  series does not have. Resolution: bootstrap the full daily series (the block length absorbs the
+  funding-regime persistence); report a level and a signed regime difference and decay slope, not
+  a vacuous clears-zero test; bootstrap the formed return series for the secondary sort premium;
+  pin the seed and resample count.
+- **High:** the 4-hour-versus-8-hour settlement grid manufactures spurious dispersion (resolved
+  by a common-grid point-in-time carry-forward); the standard deviation is tail-dominated
+  (resolved by the equal-weight interquartile-range headline); the annualization constant is
+  single-sourced to `CRYPTO_ANNUALIZATION_DAYS` and applied per event, not per coin.
+- **Medium:** the spot-ETF boundary is a comparability convention not a cause; the decay
+  estimator, the sort construction, and the perp-survivorship diagnostic are frozen; the framing
+  is a descriptive measurement with the decay in the headline.
+
+Verification: docs-only pre-registration PR. The implementation and the measured result follow.
+
 ## 2026-06-06, session 12 (figures): Study 6 recruiter-facing figures
 
 Renders two figures for the Study 6 qualified pass, purely from the committed artifact

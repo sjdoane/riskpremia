@@ -36,6 +36,11 @@ of candidate premia:
    the equity sleeve carrying the result and the long-Treasury sleeve the weak part). A classic
    rule validated with full rigor, not a novel edge
    ([ADR 0008](docs/decisions/0008-pivot-to-cross-asset-defensive-trend.md)).
+7. **Crypto funding-rate dispersion** (Study 7): a descriptive, explicitly non-deployable
+   measurement of the cross-sectional dispersion of perpetual funding across coins (distinct
+   from Study 1's level carry), on the clean Binance funding archive. Selected and pre-registered
+   after a four-lens fork as a measured object, with no tradeable-Sharpe headline; build pending
+   ([ADR 0009](docs/decisions/0009-pivot-to-funding-dispersion-measurement.md)).
 
 Sibling to [pit-backtest](https://github.com/sjdoane/pit-backtest), whose headline was a
 *reproducible honest momentum null*. The contribution here is the same: cost realism,
@@ -48,8 +53,10 @@ failure.
 > Study 6, a cross-asset defensive trend on public-domain data, is the first result to clear
 > the deflated full-sample gate: a qualified, regime-dependent pass
 > ([ADR 0008](docs/decisions/0008-pivot-to-cross-asset-defensive-trend.md)). The same gate
-> that rejected five candidates also accepts on the merits. Live state is always in
-> [STATUS.md](STATUS.md).
+> that rejected five candidates also accepts on the merits. Study 7, a crypto funding-dispersion
+> measurement, is pre-registered
+> ([ADR 0009](docs/decisions/0009-pivot-to-funding-dispersion-measurement.md)). Live state is
+> always in [STATUS.md](STATUS.md).
 
 ## Study 6 result: a cross-asset defensive trend (the first qualified pass)
 
@@ -211,8 +218,9 @@ every number on its own. Dependencies are pinned to exact patch; mypy runs stric
   kill), [0004](docs/decisions/0004-pivot-to-variance-risk-premium.md) (the VRP pivot),
   [0005](docs/decisions/0005-pivot-to-ctrend-trend-factor.md) (CTREND), and
   [0006](docs/decisions/0006-pivot-to-btc-eth-slow-trend.md) (BTC/ETH slow trend),
-  [0007](docs/decisions/0007-kill-cme-micro-g6-fx-carry.md) (CME Micro G6 FX feasibility), and
-  [0008](docs/decisions/0008-pivot-to-cross-asset-defensive-trend.md) (cross-asset defensive trend).
+  [0007](docs/decisions/0007-kill-cme-micro-g6-fx-carry.md) (CME Micro G6 FX feasibility),
+  [0008](docs/decisions/0008-pivot-to-cross-asset-defensive-trend.md) (cross-asset defensive trend), and
+  [0009](docs/decisions/0009-pivot-to-funding-dispersion-measurement.md) (funding-dispersion measurement).
 - [CHANGELOG.md](CHANGELOG.md) is the audit trail: every review finding and its resolution.
 
 ## Setup
