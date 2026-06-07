@@ -71,7 +71,10 @@ maximum drawdown exceeds 35 percent, or if costs exceed 25 percent of the gross 
 `tests/data/xtrend_panel.csv` and `tests/data/xtrend_panel_sources.json`, both SHA256-stamped
 in `data/snapshots/manifest.toml`. The panel is an as-of snapshot of openly-redistributable
 public-domain research data; the checksum attests tamper-evidence of the committed series,
-not vendor byte-fidelity.
+not vendor byte-fidelity. `scripts/regenerate_xtrend_figures.py` renders
+`docs/figures/xtrend_equity.png` (the net-wealth curve with the drawdown panel) and
+`docs/figures/xtrend_gate_scorecard.png` (the conditional PSR(0) by window and sleeve against
+the 0.95 bar) purely from the committed artifact (the `figures` extra, a skipif render test).
 
 ## Result
 

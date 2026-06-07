@@ -60,6 +60,7 @@ $py = "C:\Users\SamJD\.venvs\riskpremia\Scripts\python.exe"
 & $py -m scripts.run_btc_eth_trend_gate # no-network: committed BTC/ETH fixture -> committed Study 4 gate artifact
 & $py -m scripts.build_xtrend_inputs # one-time: fetch Kenneth French + US Treasury -> committed Study 6 panel + stamp
 & $py -m scripts.run_xtrend_gate     # no-network: committed panel -> committed Study 6 cross-asset trend gate artifact
+& $py -m scripts.regenerate_xtrend_figures # render docs/figures/xtrend_*.png from the committed Study 6 artifact
 & $py -m scripts.build_vrp_artifact # one-time: fetch live data -> committed VRP artifact + fixtures + manifest stamp
 & $py -m scripts.regenerate_figures # render docs/figures/*.png from the committed artifact (no network)
 ```

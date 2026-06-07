@@ -3,6 +3,26 @@
 What shipped, plus every review finding and its resolution (rule 2). Newest
 first. This is the audit trail; STATUS.md is the current-state snapshot.
 
+## 2026-06-06, session 12 (figures): Study 6 recruiter-facing figures
+
+Renders two figures for the Study 6 qualified pass, purely from the committed artifact
+(`artifacts/xtrend_gate.json`), mirroring the VRP figures pattern (the `figures` extra,
+lazy matplotlib on the Agg backend, a skipif render test, no network):
+
+- `docs/figures/xtrend_equity.png`: the daily net-wealth curve (log scale) with the
+  drawdown panel, annotated with the CAGR and the 11.2 percent max drawdown.
+- `docs/figures/xtrend_gate_scorecard.png`: the conditional PSR(0) by window and sleeve
+  (full sample, monthly, 2008-onward, 2022-onward, CPCV worst fold, equity-alone,
+  long-Treasury-alone) against the 0.95 bar, so the qualified-pass-with-regime-stress story
+  reads at a glance.
+
+Adds `src/riskpremia/xtrend/figures.py`, `scripts/regenerate_xtrend_figures.py`, and the
+render test; the README gains a Study 6 result section that embeds both figures. The honesty
+caveats travel on the figures as footnotes (total-return wealth net of costs; the gate is
+scored in excess of bills; the result is regime-dependent and equity-trend-driven).
+Verification: 263 offline pass / 18 deselected; mypy strict (72 source files); ruff clean;
+em-dash clean.
+
 ## 2026-06-06, session 12: Study 6 cross-asset trend gate, the first qualified pass
 
 The pre-registered cross-asset defensive trend rule (ADR 0008) is built and returns the
