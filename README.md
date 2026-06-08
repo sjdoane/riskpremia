@@ -45,12 +45,12 @@ of candidate premia:
    cross-section US retail cannot access. A measured object with no tradeable-Sharpe headline
    ([ADR 0009](docs/decisions/0009-pivot-to-funding-dispersion-measurement.md)).
 8. **Volatility-managed market portfolio** (Study 8): a retail-deployable swing that adjudicates
-   the contested volatility-managed claim (Moreira-Muir 2017 positive vs Cederburg et al. 2020
-   and Barroso-Detzel 2020 negative out-of-sample net of cost) on the project's deflated
-   net-of-cost gate, on the clean Kenneth French data already in the repo. Scoped to the managed
-   market (the lone documented cost-survivor) and scored managed-minus-unmanaged, so the result
-   is defensible regardless of sign; the predicted market-survives, factors-die asymmetry is a
-   pre-registered secondary. Selected after a four-lens fork; build pending
+   the contested volatility-managed claim (Moreira-Muir 2017 vs Cederburg et al. 2020 and
+   Barroso-Detzel 2020) on the project's deflated net-of-cost gate, scored as the managed-minus-
+   unmanaged difference over buy-and-hold. **Result: a clean Cederburg replication (an honest
+   null).** A real gross volatility-timing alpha of +1.78%/yr at equal volatility does not survive
+   the 2.0x retail leverage cap (the dominant drag) and net-of-cost frictions; the difference
+   clears nothing (PSR(0) 0.457) and is near-orthogonal to Study 6
    ([ADR 0010](docs/decisions/0010-pivot-to-volatility-managed-equity.md)).
 
 Sibling to [pit-backtest](https://github.com/sjdoane/pit-backtest), whose headline was a
@@ -69,7 +69,8 @@ failure.
 > measured object with no tradeable-Sharpe headline
 > ([ADR 0009](docs/decisions/0009-pivot-to-funding-dispersion-measurement.md)). Study 8, a
 > volatility-managed market portfolio that adjudicates the contested Moreira-Muir claim on the
-> deflated net-of-cost gate, is pre-registered
+> deflated net-of-cost gate, is done: a clean Cederburg replication, the sixth honest null, where
+> a real gross timing alpha dies on the retail leverage cap and costs
 > ([ADR 0010](docs/decisions/0010-pivot-to-volatility-managed-equity.md)). Live state is
 > always in [STATUS.md](STATUS.md).
 
@@ -156,6 +157,44 @@ python -m scripts.regenerate_dispersion_figures
 python -m scripts.run_dispersion_measurement
 # rebuild the committed series from the live Binance Vision funding archive (one-time)
 python -m scripts.build_dispersion_inputs
+```
+
+## Study 8 result: a volatility-managed market portfolio (a clean Cederburg replication)
+
+A retail-deployable swing that adjudicates the contested volatility-managed claim on the project's
+deflated net-of-cost gate. The US equity market is scaled inversely to the previous month's
+realized variance (Moreira-Muir), and the kill is the managed-MINUS-unmanaged difference over
+buy-and-hold (a c-normalized managed market is a levered long-equity position whose standalone
+Sharpe is just the equity premium, so only the difference tests volatility timing). 1990 to 2026,
+on the same Kenneth French data as Study 6.
+
+| Quantity | Value |
+| --- | --- |
+| Managed-minus-unmanaged difference PSR(0) (the kill) | **0.457** (bar 0.95) |
+| Gross timing alpha (uncapped, costless, equal vol) | **+1.78%/yr** |
+| Leverage-cap drag / cost drag / net | **-2.14% / -0.53% / -0.88%** per year |
+| Expanding-window real-time c difference PSR(0) | **0.429** (agrees) |
+| Difference correlation with Study 6 | **0.042** (near-orthogonal) |
+
+This is a clean **Cederburg replication** and an honest null: a real volatility-timing alpha exists
+gross (+1.78%/yr at equal volatility), but it dies on the realistic retail implementation. The
+dominant killer is the 2.0x leverage cap (it clips exactly the high-weight calm months the strategy
+relies on), not cost, and that attribution is disclosed in the artifact so the null is visibly not
+a cost trick. Even the market sleeve, the one documented cost-survivor in Barroso-Detzel, is a null
+under this conservative cap-plus-cost stack. The difference is near-orthogonal to Study 6, so the
+two are genuinely distinct signals; the managed market simply adds no deployable value.
+
+![Volatility-managed vs unmanaged market net wealth and their ratio](docs/figures/volmanaged_wealth.png)
+
+![The difference gate fails on every stress dimension](docs/figures/volmanaged_scorecard.png)
+
+The numbers and figures regenerate from the committed Study 6 panel with no new data:
+
+```powershell
+# render the figures from the committed panel + artifact (needs the figures extra)
+python -m scripts.regenerate_volmanaged_figures
+# rebuild the gate artifact from the committed panel (no network)
+python -m scripts.run_volmanaged_gate
 ```
 
 ## Study 2 result: the BTC variance risk premium

@@ -3,6 +3,71 @@
 What shipped, plus every review finding and its resolution (rule 2). Newest
 first. This is the audit trail; STATUS.md is the current-state snapshot.
 
+## 2026-06-07, session 16: Study 8 build, the volatility-managed market gate (a non-viable null)
+
+The volatility-managed market gate pre-registered in ADR 0010 is implemented, run, and shipped
+with figures on `feat/volmanaged-gate`.
+
+- `src/riskpremia/volmanaged/`: `measure.py` (the Moreira-Muir inverse-variance signal, the
+  c-normalization computed on the UNCAPPED weight with the cap as a separate friction, the daily
+  managed/unmanaged/difference excess series with one coherent cost model: expense on exposure,
+  financing on the levered leg, per-side turnover on the continuous monthly weight change),
+  `gate.py` (the kill = the managed-minus-unmanaged difference PSR(0), the gross decomposition,
+  the CPCV worst fold and 2008/2022 recency stress, the literature-scale deflation ladder, the
+  leverage-cap and financing-spread sensitivities, the expanding-window-c out-of-sample check, the
+  redundancy-vs-Study-6 numbers, and the artifact), `figures.py` (render-only), `errors.py`.
+- Scripts: `run_volmanaged_gate.py` (no-network, reuses the committed Study 6 panel; the primary
+  needs no new data) and `regenerate_volmanaged_figures.py`.
+- Committed outputs: `artifacts/volmanaged_gate.json`, `docs/figures/volmanaged_{wealth,scorecard}.png`.
+- Tests: `test_volmanaged_measure.py` (the signal, the c-identity, the cap, the costs),
+  `test_volmanaged_reproduces.py` (the committed panel reproduces the artifact to the digit + the
+  honest-null framing + the near-orthogonality to Study 6), `test_volmanaged_figures.py` (skipif
+  matplotlib). 293 offline pass.
+- `docs/research/0012-volatility-managed-equity-result.md`: the measured result note. README /
+  STATUS / pyproject updated.
+
+**Result (1990-02 to 2026-03, 9032 daily obs, effective T 609): NON-VIABLE, a clean Cederburg
+replication.** The managed-minus-unmanaged difference (the kill statistic, not the standalone
+managed PSR) full-sample conditional PSR(0) is 0.457, far below 0.95; the difference annualized
+Sharpe is -0.07. The gross decomposition is the honest attribution: a real gross volatility-timing
+alpha of +1.78%/yr at equal volatility (the Moreira-Muir effect is present) does not survive, the
+2.0x retail leverage cap removing -2.14%/yr (the dominant drag, 80%) and net-of-cost frictions a
+further -0.53%/yr (20%), leaving -0.88%/yr. The expanding-window real-time c agrees (0.429), every
+stress slice is below the bar (CPCV 0.127, recency 0.436/0.471, deflated to 0.331, caps to 0.457),
+and the difference is near-orthogonal to Study 6 (correlation 0.042). Even the market sleeve, the
+documented Barroso-Detzel cost-survivor, is a null under this conservative cap-plus-cost stack.
+
+#### Design review (pre-build) and resolutions
+
+A senior-quant design review of the pre-registration returned two Critical, three High, and four
+Medium findings, all folded into the ADR 0010 design-review amendment before any code:
+
+- **Critical 1:** a c-normalized managed market is a levered long-equity position whose standalone
+  PSR is the equity premium, so the kill must be the managed-minus-unmanaged DIFFERENCE series, not
+  the standalone managed PSR.
+- **Critical 2:** the full-sample c is look-ahead once the cap and costs bind, so c is computed on
+  the UNCAPPED series with the cap as a separate friction, and an expanding-window real-time c is
+  reported as the out-of-sample check.
+- **High:** one coherent cost model (no leverage-ETF double-count); a literature-scale deflation
+  trial ladder and a structurally-different v_sr family; the no-fit CPCV inheritance holds only
+  under the uncapped c.
+- **Medium:** the factor-asymmetry secondary is a turnover-only stacked follow-up with a
+  pre-registered decision rule; the redundancy check reports the bet-level numbers, not just the
+  level correlation; PIT edges pinned.
+
+#### Post-implementation review and resolution
+
+An adversarial post-implementation review returned a SHIP verdict with no Critical or High
+findings: it reproduced the headline from scratch, verified the c-identity to 1e-8, reconstructed
+the cost series to exactly 0.0, confirmed byte-for-byte reproduction, and independently derived the
++1.78% / -2.14% / -0.53% attribution. Its one Medium finding (the failure is dominated by the
+leverage cap, not cost, and the artifact did not surface the positive gross alpha) is resolved by
+adding the gross-decomposition fields to the artifact and rewording the verdict to attribute the
+failure to the cap plus costs, with the positive gross alpha disclosed, so the honest-null framing
+shows its work and the cost model is visibly not tuned to force the null.
+
+Verification: 293 offline pass, mypy strict clean (88 source files), ruff clean, em-dash clean.
+
 ## 2026-06-07, session 15: Study 8 pivot, a volatility-managed market portfolio (pre-registration)
 
 After the Study 7 merge (PR #25), a fresh fork selected Study 8. Shipped docs-only (pivot

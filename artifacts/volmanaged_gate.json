@@ -1,0 +1,208 @@
+{
+  "caveats": [
+    "The kill statistic is the managed-MINUS-unmanaged difference series, not the standalone managed series: a c-normalized managed market is a levered long-equity position whose Sharpe is the equity premium, so only the difference over buy-and-hold tests volatility timing.",
+    "The full-sample c is the Moreira-Muir in-sample normalization (managed full-sample volatility equals unmanaged). It is computed on the UNCAPPED weight with the 2.0 cap as a separate friction. The expanding-window c row is the real-time, point-in-time analog and must agree.",
+    "Costs are one coherent model: a 10 bps expense on the equity exposure, a financing spread on the levered portion over the bill (1.0 percent primary, with 0.5 and 2.0 percent as the bracket), and a 5 bps per-side turnover on the continuous monthly weight change. The unmanaged benchmark carries the same expense and no financing or turnover.",
+    "The literature predicts the managed market survives a deflated net-of-cost gate while the managed factors do not; the factor-asymmetry secondary is the stacked follow-up, not here.",
+    "A deployable implementation is a broad-market ETF base plus explicit margin financing on the levered leg; a leveraged ETF is an unmodeled alternative whose embedded financing differs."
+  ],
+  "cost_model": {
+    "basis": "expense on exposure, financing on the levered leg, turnover on weight change",
+    "expense_annual": 0.001,
+    "financing_spread_annual": 0.01,
+    "turnover_cost_per_side": 0.0005
+  },
+  "data_end": "2026-03-31",
+  "data_start": "1990-01-02",
+  "fingerprint": {
+    "n_panel_rows": 9053,
+    "panel_relpath": "tests/data/xtrend_panel.csv",
+    "panel_sha256": "c66cab0e84b4c1f05a58b884f3a309a1a3917fecb6c903be45e3244a3b4397c2",
+    "provenance_relpath": "tests/data/xtrend_panel_sources.json",
+    "provenance_sha256": "35ef8017e9aaa9de6f9acb27850644f92dc3c3630c5007afbd52f5f75b8229b3"
+  },
+  "first_scored_date": "1990-02-01",
+  "knobs": {
+    "burnin_months": 60,
+    "cap": 2.0,
+    "estimator": "realized",
+    "expense_annual": 0.001,
+    "financing_spread_annual": 0.01,
+    "rv_months": 1,
+    "trading_days_per_year": 252.0,
+    "turnover_cost_per_side": 0.0005
+  },
+  "last_scored_date": "2026-03-31",
+  "n_scored_days": 9032,
+  "schema_version": 1,
+  "score": {
+    "cap_sensitivity": [
+      {
+        "cap": 1.0,
+        "full_psr_zero": 0.33606989664928666,
+        "mean_weight": 0.7162344674807063
+      },
+      {
+        "cap": 1.5,
+        "full_psr_zero": 0.4132242331887064,
+        "mean_weight": 0.8931941880191956
+      },
+      {
+        "cap": 2.0,
+        "full_psr_zero": 0.45665123800887325,
+        "mean_weight": 0.9921886146548259
+      }
+    ],
+    "context": {
+      "managed_ann_sharpe": 0.553276158086454,
+      "managed_psr_zero": 0.7311561405439584,
+      "unmanaged_ann_sharpe": 0.48425794582932047,
+      "unmanaged_psr_zero": 0.9180928524310019
+    },
+    "cpcv": {
+      "fold_median": 0.46156477739601637,
+      "fold_min": 0.12674689250752658,
+      "fold_psr_zero": [
+        0.5459242933989032,
+        0.7790013782389206,
+        0.7397793708032161,
+        0.6432792312077149,
+        0.3059177638475146,
+        0.3386276368959569,
+        0.46156477739601637,
+        0.45082862111209865,
+        0.12674689250752658,
+        0.5300838595143323,
+        0.5733074093698264,
+        0.2521264204675511,
+        0.5438423237573822,
+        0.3009798729490675,
+        0.4287838094929801
+      ],
+      "k_test": 2,
+      "min_test_size": 3010,
+      "n_groups": 6,
+      "n_splits": 15
+    },
+    "deflation": {
+      "dsr_by_trials": [
+        0.3849387337682999,
+        0.3686180166332448,
+        0.35449751543665364,
+        0.34195500996489525,
+        0.33061673864761165
+      ],
+      "trials": [
+        8,
+        16,
+        32,
+        64,
+        128
+      ],
+      "v_sr": 2.6076291166644505e-05,
+      "variant_labels": [
+        "rv1_cap2",
+        "rv2_cap2",
+        "rv3_cap2",
+        "ewma_cap2",
+        "rv1_cap15",
+        "rv1_cap10"
+      ],
+      "variant_sr_hat": [
+        -0.004416607752669488,
+        -0.002359021681077734,
+        -0.0034426076606306646,
+        -0.003089275541144976,
+        -0.008924008800209498,
+        -0.015570604910355477
+      ]
+    },
+    "descriptive": {
+      "c_value": 0.0011925848493626126,
+      "frac_capped": 0.15312223206377326,
+      "frac_levered": 0.43689105403011513,
+      "managed_cagr": 0.09878181741255343,
+      "managed_max_drawdown": 0.26685989698602386,
+      "max_weight": 2.0,
+      "mean_turnover": 0.41434566667045003,
+      "mean_weight": 0.9921886146548259,
+      "total_expense_cost": 0.03556129987128067,
+      "total_financing_cost": 0.09890547052684824,
+      "total_turnover_cost": 0.08991300966748762
+    },
+    "difference": {
+      "ann_sharpe": -0.0701114745125,
+      "effective_t": 609,
+      "full_psr_zero": 0.45665123800887325,
+      "gamma_3": 0.09804652173982811,
+      "gamma_4": 22.41455568340867,
+      "mean_daily": -3.484755773770784e-05,
+      "monthly_psr_zero": 0.36958038933067916,
+      "n_monthly_obs": 434,
+      "pw_block_length": 14.829055271122126,
+      "raw_t": 9032,
+      "sr_hat": -0.004416607752669488
+    },
+    "expanding_c": {
+      "burnin_months": 60,
+      "full_psr_zero": 0.42935310129345494,
+      "mean_weight": 0.8940488049314489
+    },
+    "financing_sensitivity": [
+      {
+        "full_psr_zero": 0.46320138238519315,
+        "spread_annual": 0.005
+      },
+      {
+        "full_psr_zero": 0.45665123800887325,
+        "spread_annual": 0.01
+      },
+      {
+        "full_psr_zero": 0.44386286808085024,
+        "spread_annual": 0.02
+      }
+    ],
+    "gross": {
+      "cap_drag_ann_return": -0.021355335840754833,
+      "capped_costless_ann_return": -0.003521209818222136,
+      "cost_drag_ann_return": -0.00526037473168024,
+      "net_ann_return": -0.008781584549902376,
+      "uncapped_costless_ann_return": 0.017834126022532697,
+      "uncapped_costless_ann_sharpe": 0.11462444891758083
+    },
+    "passes": false,
+    "passes_psr": false,
+    "recency": [
+      {
+        "effective_t": 344,
+        "name": "from_2008",
+        "psr_zero": 0.43605983110919794,
+        "raw_t": 4556,
+        "start": "2008-01-01"
+      },
+      {
+        "effective_t": 609,
+        "name": "from_2022",
+        "psr_zero": 0.4712169595174108,
+        "raw_t": 1057,
+        "start": "2022-01-01"
+      }
+    ],
+    "redundancy": {
+      "active_bet_corr": 0.491220963097059,
+      "combo_ann_sharpe": 0.6604563413710515,
+      "difference_vs_xtrend_corr": 0.041947291369823746,
+      "managed_ann_sharpe": 0.5833995331971379,
+      "managed_vs_xtrend_corr": 0.712591965474183,
+      "n_aligned": 8843,
+      "xtrend_ann_sharpe": 0.6919036140356625
+    },
+    "regime_dependent": false
+  },
+  "study": "Volatility-managed market portfolio (Study 8, ADR 0010)",
+  "verdict": {
+    "headline": "NON-VIABLE volatility-managed market; no value-add over buy-and-hold",
+    "non_viable": true,
+    "reason": "diff PSR(0) 0.457 below 0.95: a real gross timing alpha (+1.78%/yr) dies on the 2.0x retail leverage cap (-2.14%/yr, the dominant drag) and costs (-0.53%/yr); a clean Cederburg replication"
+  }
+}
