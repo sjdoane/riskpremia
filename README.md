@@ -188,13 +188,25 @@ two are genuinely distinct signals; the managed market simply adds no deployable
 
 ![The difference gate fails on every stress dimension](docs/figures/volmanaged_scorecard.png)
 
-The numbers and figures regenerate from the committed Study 6 panel with no new data:
+**The factor-asymmetry secondary: a uniform null.** The same scaler applied to the long-short
+Kenneth French factors (SMB, HML, RMW, CMA, momentum) with a turnover-only cost gives the same
+verdict: the managed market and all five managed factors fail the net-of-cost gate, so the
+literature's market-survives, factors-die asymmetry does not hold here. Momentum (WML) is the
+apparent standout, with a large +11.57%/yr gross volatility-timing alpha (the Barroso-Santa-Clara
+managed-momentum effect), but it is a look-ahead artifact: under the project's own expanding-window
+real-time c, its out-of-sample PSR collapses from 0.83 to 0.49 and its net alpha to about zero. The
+uniform null is robust out-of-sample.
+
+![Volatility-managed market and factors: a uniform null](docs/figures/volmanaged_factor_asymmetry.png)
+
+The numbers and figures regenerate from the committed panels with no new data:
 
 ```powershell
-# render the figures from the committed panel + artifact (needs the figures extra)
+# render the figures from the committed panels + artifacts (needs the figures extra)
 python -m scripts.regenerate_volmanaged_figures
-# rebuild the gate artifact from the committed panel (no network)
+# rebuild the gate and asymmetry artifacts from the committed panels (no network)
 python -m scripts.run_volmanaged_gate
+python -m scripts.run_volmanaged_factor_asymmetry
 ```
 
 ## Study 2 result: the BTC variance risk premium

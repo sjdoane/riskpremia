@@ -161,3 +161,160 @@ class KenFrenchSource:
             raise VenueFetchError("Ken French zip has no CSV member")
         text = archive.read(sorted(names)[0]).decode("utf-8", errors="strict")
         return parse_daily_factors(text)
+
+
+# The five-factor and momentum daily files (the Study 8 factor-asymmetry secondary). Same
+# openly-redistributed Kenneth French library and loader family as the three-factor file above;
+# additive so the Study 6 path is untouched.
+_FIVE_FACTOR_URL = (
+    "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/"
+    "F-F_Research_Data_5_Factors_2x3_daily_CSV.zip"
+)
+_MOMENTUM_URL = (
+    "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/"
+    "F-F_Momentum_Factor_daily_CSV.zip"
+)
+
+
+@attrs.frozen(slots=True)
+class KenFrenchFiveFactorDaily:
+    """One trading day of the daily five research factors, as decimals (not percent)."""
+
+    date: date
+    mkt_rf: Decimal
+    smb: Decimal
+    hml: Decimal
+    rmw: Decimal
+    cma: Decimal
+    rf: Decimal
+
+
+@attrs.frozen(slots=True)
+class KenFrenchMomentumDaily:
+    """One trading day of the daily momentum factor (WML), as a decimal (not percent)."""
+
+    date: date
+    mom: Decimal
+
+
+def parse_five_factor_daily(text: str) -> list[KenFrenchFiveFactorDaily]:
+    """Parse the daily five-factor CSV: header `,Mkt-RF,SMB,HML,RMW,CMA,RF` then dated rows."""
+    lines = text.splitlines()
+    header_index = next(
+        (i for i, line in enumerate(lines) if "Mkt-RF" in line and "RMW" in line and "CMA" in line),
+        None,
+    )
+    if header_index is None:
+        raise VenueFetchError("Ken French five-factor daily: header row not found")
+    out: list[KenFrenchFiveFactorDaily] = []
+    seen: set[date] = set()
+    for line in lines[header_index + 1 :]:
+        fields = [f.strip() for f in line.split(",")]
+        if len(fields) < 7:
+            continue
+        day = _parse_day(fields[0])
+        if day is None:
+            continue
+        if day in seen:
+            raise VenueFetchError(f"Ken French five-factor daily: duplicate date {day}")
+        seen.add(day)
+        out.append(
+            KenFrenchFiveFactorDaily(
+                date=day,
+                mkt_rf=_decimal(fields[1], field="Mkt-RF", day=fields[0]),
+                smb=_decimal(fields[2], field="SMB", day=fields[0]),
+                hml=_decimal(fields[3], field="HML", day=fields[0]),
+                rmw=_decimal(fields[4], field="RMW", day=fields[0]),
+                cma=_decimal(fields[5], field="CMA", day=fields[0]),
+                rf=_decimal(fields[6], field="RF", day=fields[0]),
+            )
+        )
+    if not out:
+        raise VenueFetchError("Ken French five-factor daily: no dated rows parsed")
+    out.sort(key=lambda r: r.date)
+    return out
+
+
+def parse_momentum_daily(text: str) -> list[KenFrenchMomentumDaily]:
+    """Parse the daily momentum CSV: header `,Mom` then `YYYYMMDD, Mom` dated rows."""
+    lines = text.splitlines()
+    header_index = next((i for i, line in enumerate(lines) if "Mom" in line and "," in line), None)
+    if header_index is None:
+        raise VenueFetchError("Ken French momentum daily: header row not found")
+    out: list[KenFrenchMomentumDaily] = []
+    seen: set[date] = set()
+    for line in lines[header_index + 1 :]:
+        fields = [f.strip() for f in line.split(",")]
+        if len(fields) < 2:
+            continue
+        day = _parse_day(fields[0])
+        if day is None:
+            continue
+        if day in seen:
+            raise VenueFetchError(f"Ken French momentum daily: duplicate date {day}")
+        seen.add(day)
+        out.append(
+            KenFrenchMomentumDaily(date=day, mom=_decimal(fields[1], field="Mom", day=fields[0]))
+        )
+    if not out:
+        raise VenueFetchError("Ken French momentum daily: no dated rows parsed")
+    out.sort(key=lambda r: r.date)
+    return out
+
+
+class KenFrenchFactorsSource:
+    """The daily five-factor and momentum files (the Study 8 factor-asymmetry secondary)."""
+
+    def __init__(
+        self,
+        *,
+        five_factor_url: str = _FIVE_FACTOR_URL,
+        momentum_url: str = _MOMENTUM_URL,
+        open_zip: Callable[[str], bytes] | None = None,
+        timeout: float = 60.0,
+        max_attempts: int = 4,
+        retry_backoff_s: float = 2.0,
+    ) -> None:
+        self._five_factor_url = five_factor_url
+        self._momentum_url = momentum_url
+        self._open_zip = open_zip
+        self._timeout = timeout
+        self._max_attempts = max_attempts
+        self._retry_backoff_s = retry_backoff_s
+
+    def _zip_text(self, url: str) -> str:
+        if self._open_zip is not None:
+            raw = self._open_zip(url)
+        else:
+            last_error: Exception | None = None
+            raw = b""
+            for attempt in range(self._max_attempts):
+                try:
+                    req = urllib.request.Request(url, headers={"User-Agent": _USER_AGENT})
+                    with urllib.request.urlopen(req, timeout=self._timeout) as resp:
+                        raw = bytes(resp.read())
+                        break
+                except (urllib.error.URLError, TimeoutError, ConnectionError) as exc:
+                    last_error = exc
+                    if attempt + 1 < self._max_attempts:
+                        time.sleep(self._retry_backoff_s * (attempt + 1))
+            else:
+                raise VenueFetchError(
+                    f"Ken French factors fetch failed after {self._max_attempts} attempts"
+                ) from last_error
+        try:
+            archive = zipfile.ZipFile(io.BytesIO(raw))
+        except zipfile.BadZipFile as exc:
+            raise VenueFetchError("Ken French factors response was not a valid zip") from exc
+        names = [n for n in archive.namelist() if n.lower().endswith(".csv")]
+        if not names:
+            raise VenueFetchError("Ken French factors zip has no CSV member")
+        return archive.read(sorted(names)[0]).decode("utf-8", errors="strict")
+
+    def fetch_five_factor_daily(self) -> list[KenFrenchFiveFactorDaily]:
+        """Fetch and parse the daily five research factors, sorted ascending by date."""
+        return parse_five_factor_daily(self._zip_text(self._five_factor_url))
+
+    def fetch_momentum_daily(self) -> list[KenFrenchMomentumDaily]:
+        """Fetch and parse the daily momentum factor, sorted ascending by date."""
+        return parse_momentum_daily(self._zip_text(self._momentum_url))

@@ -128,6 +128,32 @@ rows = 1
 note = "Committed provenance for tests/data/funding_dispersion_series.csv: the CTREND panel hash used for eligibility, the funding source, the build parameters, and the fetch date."
 
 [[snapshot]]
+name = "volmanaged-factor-panel"
+venue = "ken_french"
+instrument = "five-factor-plus-momentum-daily"
+kind = "reproducibility_fixture"
+relpath = "tests/data/volmanaged_factor_panel.csv"
+source_url = "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Research_Data_5_Factors_2x3_daily_CSV.zip"
+fetched_utc = 2026-06-08T18:57:37+00:00
+sha256 = "0d0b73bcae3cdca45359aa48ef8884ba13c0042f21d16f19200f7f2767083c2a"
+size_bytes = 436660
+rows = 9149
+note = "Committed daily Kenneth French factor panel (SMB, HML, RMW, CMA, WML) for the Study 8 factor-asymmetry secondary, 1990 onward. As-of snapshot; the SHA256 attests tamper-evidence of the committed series. The five-factor and momentum daily files are openly redistributed."
+
+[[snapshot]]
+name = "volmanaged-factor-sources"
+venue = "ken_french"
+instrument = "five-factor-plus-momentum-daily"
+kind = "reproducibility_fixture"
+relpath = "tests/data/volmanaged_factor_sources.json"
+source_url = "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Momentum_Factor_daily_CSV.zip"
+fetched_utc = 2026-06-08T18:57:37+00:00
+sha256 = "2d162636ecd6e819bbbb407dd9fd51d306629989fe8c0c8b228e30d456906b9f"
+size_bytes = 397
+rows = 1
+note = "Committed provenance for tests/data/volmanaged_factor_panel.csv."
+
+[[snapshot]]
 name = "vrp-straddle-entries"
 venue = "tardis"
 instrument = "BTCUSDT"

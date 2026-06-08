@@ -1,0 +1,106 @@
+{
+  "asymmetry_confirmed": false,
+  "caveats": [
+    "The managed factor return is scored as the managed-MINUS-unmanaged difference, the same kill as the market primary; a long-short factor is already an excess return, so the cost is turnover-only (no financing leg, no exposure expense) and the 2.0x cap is a scaling limit.",
+    "The market result is the Study 8 primary (referenced here, not re-scored); the asymmetry is confirmed only if the managed market clears the bar and at least four of the five managed factors do not (the pre-registered rule). The market is a null, so the asymmetry as defined is not confirmed; the honest finding is whether the factors also fail (a uniform null)."
+  ],
+  "data_end": "2026-04-30",
+  "data_start": "1990-01-02",
+  "factors": [
+    {
+      "cap_drag_ann_return": -0.002576742665712282,
+      "cost_drag_ann_return": -0.0022835443325439526,
+      "difference_ann_sharpe": -0.2547318010233484,
+      "difference_expanding_psr_zero": 0.27332088712261815,
+      "difference_full_psr_zero": 0.19712398594547131,
+      "effective_t": 2824,
+      "gross_uncapped_ann_return": -0.009446441658860851,
+      "mean_weight": 0.9927457058619448,
+      "name": "smb",
+      "net_ann_return": -0.014306728657117086,
+      "passes": false,
+      "raw_t": 9127
+    },
+    {
+      "cap_drag_ann_return": 0.002805677826686552,
+      "cost_drag_ann_return": -0.0019269428952481344,
+      "difference_ann_sharpe": -0.08304131587021249,
+      "difference_expanding_psr_zero": 0.44218592069764295,
+      "difference_full_psr_zero": 0.43042222902238686,
+      "effective_t": 1123,
+      "gross_uncapped_ann_return": -0.008025158821793606,
+      "mean_weight": 1.0847872253438382,
+      "name": "hml",
+      "net_ann_return": -0.007146423890355189,
+      "passes": false,
+      "raw_t": 9127
+    },
+    {
+      "cap_drag_ann_return": -0.012944526095828605,
+      "cost_drag_ann_return": -0.0017637950961413803,
+      "difference_ann_sharpe": -0.0798407113705088,
+      "difference_expanding_psr_zero": 0.27071843244966537,
+      "difference_full_psr_zero": 0.4347916447127386,
+      "effective_t": 1064,
+      "gross_uncapped_ann_return": 0.010151505033473054,
+      "mean_weight": 1.1178221901627095,
+      "name": "rmw",
+      "net_ann_return": -0.004556816158496932,
+      "passes": false,
+      "raw_t": 9127
+    },
+    {
+      "cap_drag_ann_return": -0.0014604487500106938,
+      "cost_drag_ann_return": -0.0020497785325558817,
+      "difference_ann_sharpe": -0.28916930341843033,
+      "difference_expanding_psr_zero": 0.12029873958240916,
+      "difference_full_psr_zero": 0.052443094133597934,
+      "effective_t": 8027,
+      "gross_uncapped_ann_return": -0.010376982139043065,
+      "mean_weight": 1.0716557086871956,
+      "name": "cma",
+      "net_ann_return": -0.01388720942160964,
+      "passes": false,
+      "raw_t": 9127
+    },
+    {
+      "cap_drag_ann_return": -0.07100791208813745,
+      "cost_drag_ann_return": -0.0019020314350312942,
+      "difference_ann_sharpe": 0.3717549348606033,
+      "difference_expanding_psr_zero": 0.4893885598850309,
+      "difference_full_psr_zero": 0.8258768028761578,
+      "effective_t": 1561,
+      "gross_uncapped_ann_return": 0.1157026073386476,
+      "mean_weight": 1.0672562193153945,
+      "name": "wml",
+      "net_ann_return": 0.04279266381547885,
+      "passes": false,
+      "raw_t": 9127
+    }
+  ],
+  "finding": "Uniform null: the managed market and all five managed factors fail the undeflated net-of-cost PSR(0) gate, so the literature's market-survives, factors-die asymmetry does NOT hold under this conservative retail stack. Under the full-sample c, momentum (WML) is the apparent standout (gross +11.6%/yr, full-sample difference PSR 0.83, the managed-momentum effect), but this does NOT survive the project's expanding-window real-time c: its out-of-sample PSR is 0.49, so the near-miss is a look-ahead artifact and the uniform null is robust out-of-sample. Deflation would only widen the gap.",
+  "fingerprint": {
+    "n_panel_rows": 9149,
+    "panel_relpath": "tests/data/volmanaged_factor_panel.csv",
+    "panel_sha256": "0d0b73bcae3cdca45359aa48ef8884ba13c0042f21d16f19200f7f2767083c2a",
+    "provenance_relpath": "tests/data/volmanaged_factor_sources.json",
+    "provenance_sha256": "2d162636ecd6e819bbbb407dd9fd51d306629989fe8c0c8b228e30d456906b9f"
+  },
+  "knobs": {
+    "burnin_months": 60,
+    "cap": 2.0,
+    "estimator": "realized",
+    "expense_annual": 0.0,
+    "financing_spread_annual": 0.0,
+    "rv_months": 1,
+    "trading_days_per_year": 252.0,
+    "turnover_cost_per_side": 0.0005
+  },
+  "market_difference_psr_zero": 0.45665123800887325,
+  "market_passes": false,
+  "n_factors_failing": 5,
+  "n_scored_days": 9149,
+  "schema_version": 1,
+  "study": "Volatility-managed factor asymmetry (Study 8 secondary, ADR 0010)",
+  "viability_bar": 0.95
+}
