@@ -1,0 +1,10 @@
+{
+  "provenance": {
+    "end": "2026-04-30",
+    "fetched_utc": "2026-06-08T18:57:37+00:00",
+    "five_factor_url": "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Research_Data_5_Factors_2x3_daily_CSV.zip",
+    "momentum_url": "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Momentum_Factor_daily_CSV.zip",
+    "start": "1990-01-02"
+  },
+  "schema_version": 1
+}

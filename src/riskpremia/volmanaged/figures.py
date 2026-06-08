@@ -137,6 +137,43 @@ def render_scorecard(art: dict[str, Any], out_path: Path) -> Path:
     return out_path
 
 
+def render_factor_asymmetry(asym: dict[str, Any], out_path: Path) -> Path:
+    """The market and five managed factors: difference PSR(0) (below the bar) with gross alphas."""
+    plt = _plt()
+    facs = asym["factors"]
+    labels = ["MKT"] + [f["name"].upper() for f in facs]
+    psr = [asym["market_difference_psr_zero"]] + [f["difference_full_psr_zero"] for f in facs]
+    gross = [None] + [f["gross_uncapped_ann_return"] for f in facs]
+    colors = ["#d62728" if v < VIABILITY_BAR else "#2ca02c" for v in psr]
+
+    fig, ax = plt.subplots(figsize=(10, 5))
+    bars = ax.bar(labels, psr, color=colors)
+    ax.axhline(VIABILITY_BAR, color="black", lw=1.2, ls="--", label=f"{VIABILITY_BAR:.2f} bar")
+    ax.set_ylim(0.0, 1.0)
+    ax.set_ylabel("difference PSR(0) (managed minus unmanaged)")
+    ax.set_title("Volatility-managed market and factors: a uniform null (none clear the bar)")
+    ax.legend(loc="upper right", fontsize=8)
+    ax.grid(True, axis="y", alpha=0.25)
+    for bar, g in zip(bars, gross, strict=True):
+        if g is not None:
+            ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.02,
+                    f"gross {g:+.1%}", ha="center", va="bottom", fontsize=7, color="#333333")
+    wml = next((f for f in facs if f["name"] == "wml"), None)
+    wml_exp = f"{wml['difference_expanding_psr_zero']:.2f}" if wml else "n/a"
+    fig.text(
+        0.01, 0.01,
+        "The managed market and all five managed factors fail the undeflated net-of-cost PSR(0) "
+        "gate, so the market-survives, factors-die asymmetry does not hold here. The full-sample-c "
+        f"momentum (WML) standout does not survive the real-time expanding-window c (OOS PSR "
+        f"{wml_exp}): the near-miss is a look-ahead artifact and the uniform null is robust.",
+        fontsize=6.5, color="#555555",
+    )
+    fig.tight_layout(rect=(0, 0.05, 1, 1))
+    fig.savefig(out_path, dpi=_DPI, metadata=_PNG_METADATA)
+    plt.close(fig)
+    return out_path
+
+
 def render_all(panel_path: Path, artifact_path: Path, out_dir: Path) -> list[Path]:
     """Render every Study 8 figure into `out_dir`, returning the written paths."""
     from riskpremia.xtrend.fixtures import read_panel_frame

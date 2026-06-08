@@ -3,6 +3,56 @@
 What shipped, plus every review finding and its resolution (rule 2). Newest
 first. This is the audit trail; STATUS.md is the current-state snapshot.
 
+## 2026-06-07, session 17: Study 8 factor-asymmetry secondary (a uniform null)
+
+The pre-registered factor-asymmetry secondary (ADR 0010 amendment finding 6) is implemented, run,
+and shipped with a figure on `feat/volmanaged-factor-asymmetry`.
+
+- `src/riskpremia/data/sources/ken_french.py`: additive `KenFrenchFactorsSource` plus
+  `parse_five_factor_daily` and `parse_momentum_daily` (the five-factor and momentum daily files,
+  the same openly-redistributed library; the Study 6 three-factor path is untouched).
+- `src/riskpremia/volmanaged/factors.py`: the committed factor panel fixture, `_score_factor` (the
+  same scaler with a turnover-only cost, no financing leg and no exposure expense, since a
+  long-short factor cannot be levered through a market ETF), and `build_asymmetry_artifact` with the
+  pre-registered decision rule.
+- Scripts: `build_volmanaged_factor_inputs.py` (network: fetch and join the five-factor and momentum
+  daily files, restrict to 1990 onward, write the committed panel plus provenance plus manifest
+  stamp) and `run_volmanaged_factor_asymmetry.py` (no-network).
+- Committed outputs: `tests/data/volmanaged_factor_panel.csv` (9149 rows, SHA-stamped),
+  `artifacts/volmanaged_factor_asymmetry.json`, `docs/figures/volmanaged_factor_asymmetry.png`.
+- Tests: `test_volmanaged_factors.py` (the panel round-trip, the scoring, the decision rule, the
+  offline reproduction to the digit, and the look-ahead robustness). 298 offline pass.
+- `docs/research/0012-...-result.md` extended with the secondary section; README / STATUS updated.
+
+**Result (1990-01 to 2026-04, 9149 daily obs): a uniform null.** The managed market and all five
+managed factors (SMB, HML, RMW, CMA, WML) fail the undeflated net-of-cost PSR(0) gate, so the
+literature's market-survives, factors-die asymmetry does not hold under this conservative retail
+stack. Momentum (WML) is the apparent standout (gross +11.57%/yr, the Barroso-Santa-Clara
+managed-momentum effect, full-sample difference PSR 0.826), but it is a look-ahead artifact (see the
+review below).
+
+#### Post-implementation review and resolution
+
+An adversarial post-implementation review returned FIX-THEN-SHIP with one Critical, one High, and
+one Medium, all resolved:
+
+- **Critical, the WML look-ahead:** the secondary originally scored only the full-sample c, but the
+  ADR amendment makes the expanding-window real-time c a mandatory out-of-sample check (the market
+  primary honors it). The reviewer showed WML's standout collapses under the real-time c (PSR 0.826
+  to 0.489, net +4.28%/yr to about zero), because the full-sample c is set knowing WML's ex-post
+  volatility and a large share of the apparent edge lives in the 1994-95 expanding-window burn-in.
+  Resolution: the expanding-window c row is computed for every factor and the finding now reports
+  that the WML near-miss does not survive the real-time check, strengthening the uniform null.
+- **High, the cap framing:** rest the WML kill on the look-ahead, not the 2.0x cap (which for a
+  long-short factor is a scaling choice, not a hard retail constraint). Resolved in the finding.
+- **Medium, the wording:** the factors are scored on an undeflated PSR(0), not a deflated gate;
+  corrected throughout (deflation would only widen the gap, so the null is if anything understated).
+
+The reviewer verified the turnover-only cost (financing and expense exactly zero), the
+five-factor-plus-momentum join, the c-normalization on long-short factors, and byte-for-byte
+reproduction. Verification: 298 offline pass, mypy strict clean (91 source files), ruff clean,
+em-dash clean.
+
 ## 2026-06-07, session 16: Study 8 build, the volatility-managed market gate (a non-viable null)
 
 The volatility-managed market gate pre-registered in ADR 0010 is implemented, run, and shipped

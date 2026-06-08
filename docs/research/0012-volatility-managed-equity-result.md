@@ -122,8 +122,45 @@ derived the +1.78% / -2.14% / -0.53% attribution. Its one Medium finding (surfac
 gross alpha and name the leverage cap, not cost, as the dominant killer) is resolved here and in
 the artifact's gross-decomposition fields and the reworded verdict.
 
+## The factor-asymmetry secondary (built): a uniform null
+
+The pre-registered secondary applies the identical scaler to the long-short Kenneth French factors
+(SMB, HML, RMW, CMA, and the momentum factor WML), each scored as a managed-minus-unmanaged
+difference with a turnover-only cost (a long-short factor cannot be levered through a market ETF, so
+there is no financing leg and no exposure expense; the c-normalization and 2.0x scaling cap match
+the market). 1990-01 to 2026-04, 9149 daily observations.
+
+| Factor | Difference PSR(0), full-sample c | Difference PSR(0), real-time c | Gross alpha | Net |
+| --- | --- | --- | --- | --- |
+| Market (the primary) | 0.457 | 0.429 | +1.78%/yr | -0.88%/yr |
+| SMB | 0.197 | 0.273 | -0.94%/yr | -1.43%/yr |
+| HML | 0.430 | 0.442 | -0.80%/yr | -0.71%/yr |
+| RMW | 0.435 | 0.271 | +1.02%/yr | -0.46%/yr |
+| CMA | 0.052 | 0.120 | -1.04%/yr | -1.39%/yr |
+| WML (momentum) | 0.826 | **0.489** | +11.57%/yr | +4.28%/yr |
+
+**A uniform null.** The managed market and all five managed factors fail the (undeflated)
+net-of-cost PSR(0) gate, so the literature's predicted market-survives, factors-die asymmetry does
+not hold under this conservative retail stack. The pre-registered asymmetry (confirmed only if the
+managed market clears the bar and at least four of five factors do not) is not confirmed, because
+the market is itself a null.
+
+**Momentum is the apparent standout, but it is a look-ahead artifact.** Under the full-sample c,
+WML has a large +11.57%/yr gross volatility-timing alpha (the Barroso-Santa-Clara managed-momentum
+effect, where momentum crashes cluster in high-volatility states) and the highest full-sample
+difference PSR (0.826), the closest to surviving. But this does not survive the project's own
+pre-registered expanding-window real-time c: WML's out-of-sample PSR collapses to 0.489 and its net
+alpha to about zero, because the full-sample c is set knowing WML's ex-post volatility and a large
+share of the apparent edge lives in the 1994-95 expanding-window burn-in that a real-time strategy
+could not yet trade. So even the managed-momentum near-miss is an in-sample artifact, and the
+uniform null is robust out-of-sample. This was caught by the secondary's adversarial
+post-implementation review and resolved by adding the expanding-window c row for every factor.
+
+The committed artifact is `artifacts/volmanaged_factor_asymmetry.json` (rebuilt offline from the
+committed factor panel `tests/data/volmanaged_factor_panel.csv`); the figure is
+`docs/figures/volmanaged_factor_asymmetry.png`.
+
 ## Registered next step
 
-Industry/sector momentum remains the registered backup (a long-only, retail-executable,
-distinct premium on the same Kenneth French library). The Study 8 secondary (the managed-factor
-asymmetry, predicted to also fail) is the immediate stacked follow-up.
+Industry/sector momentum is the registered backup (a long-only, retail-executable, distinct premium
+on the same Kenneth French library), the natural next deployable swing.
