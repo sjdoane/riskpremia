@@ -148,3 +148,49 @@ Accepted. The measured object, the frozen method, the gate design, and the hones
 are pre-registered. The fork, the panel findings, the literature check, and the data probes are in
 `docs/research/0013-industry-trend-net-of-market-design.md`. The build and the measured result
 follow.
+
+## Design-review amendment (2026-06-07, before implementation)
+
+A senior-quant design review of the build plan returned one Critical, two High, and several Medium
+findings, all folded in here before any code. The Critical changes what the headline gate measures
+and so revises the method above; the original text is superseded where it conflicts.
+
+1. **Critical: the primary kill is the strategy minus its own always-invested equal-weight
+   buy-and-hold, not the strategy minus the value-weight market.** When all twelve industries are
+   in-trend, the strategy is a fixed one-twelfth equal-weight industry portfolio, which is not the
+   value-weight market. So a strategy-minus-VW-market difference conflates the trend-timing (the
+   thing to measure) with a static equal-weight-versus-value-weight industry tilt (a size and
+   diversification tilt with its own premium): the Study 8 equity-premium trap displaced by one
+   level. Resolution: the headline kill is the full-sample conditional PSR(0) of the
+   **strategy-minus-EW-always-invested** difference (pure trend-timing, the direct Study 8 analog,
+   the EW benchmark charged the same expense), and two context series are reported, never the kill:
+   the **strategy-minus-VW-market** (the deployable beats-SPY question, which legitimately includes
+   the EW tilt) and the **EW-always-invested-minus-VW-market** (the static tilt, the bridge). The
+   identity strategy-minus-VW equals (strategy-minus-EW) plus (EW-minus-VW) is exposed so the
+   timing-versus-tilt attribution is auditable, mirroring the Study 8 gross decomposition.
+2. **High: the deflation v_sr family spans the axes the fork actually searched, not the
+   moving-average length alone.** The cross-trial Sharpe variance is proxied from a family crossing
+   the moving-average length (6, 8, 10, 12), the portfolio weighting (value and equal), and the
+   breadth (long-or-cash all twelve versus a top-k relative-strength variant), each scored on the
+   primary timing-difference series. The Deflated-Sharpe trial ladder is extended to 16, 32, 64, 128
+   because industry and sector timing is a heavily mined corner; a moving-average-only family would
+   understate the multiple-testing penalty.
+3. **High: cost realism.** The 5 basis-points-per-side turnover and the 0.10 percent annual expense
+   are frozen verbatim from Study 6 (preserving the no-fit claim), but a cost sensitivity at 10 and
+   20 basis points per side is reported on the difference series, with the mean per-sleeve turnover
+   and the total cost share, because twelve long-or-cash sector funds churn more than Study 6's two
+   sleeves and the thinner sector funds carry wider spreads. The expense is a single flat per-sleeve
+   rate on held notional; inactive sleeves earn the bill with no expense.
+4. **Medium: the stress and the verdict read the timing-difference series.** The purged-CPCV worst
+   fold, the recency slices, and the deflation are computed on the strategy-minus-EW difference, and
+   a **2000-onward** recency slice is added (the fork's central empirical claim is that the
+   industry edge is largely a pre-2000 artifact). The verdict's pass reads the timing-difference
+   PSR(0) and folds the worst deflation rung into regime-dependence; the honest-null outcome
+   (timing-difference PSR(0) below the bar) is a pre-registered, accepted result.
+5. **Medium: the distinctness statistic reports the active-bet correlation.** Alongside the
+   timing-difference-versus-Study-6 correlation, the active-bet correlation (the strategy's
+   fraction-of-sleeves-in-trend versus the Study 6 equity on/off) is reported on the 1990-onward
+   overlap, because two trend strategies co-move in timing by construction and the active-bet number
+   is what shows genuinely different on/off bets. The long-or-cash notional cap (gross at or below
+   1.0) is kept as a free correctness guard. The trial ladder and the v_sr family are frozen in the
+   gate constants and this ADR, not in a separate registry.

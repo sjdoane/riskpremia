@@ -318,3 +318,115 @@ class KenFrenchFactorsSource:
     def fetch_momentum_daily(self) -> list[KenFrenchMomentumDaily]:
         """Fetch and parse the daily momentum factor, sorted ascending by date."""
         return parse_momentum_daily(self._zip_text(self._momentum_url))
+
+
+# The 12-industry daily portfolios (the Study 9 industry-trend study). Same openly-redistributed
+# Kenneth French library; additive so the Study 6 and Study 8 paths are untouched.
+_INDUSTRY_12_URL = (
+    "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/"
+    "12_Industry_Portfolios_daily_CSV.zip"
+)
+INDUSTRY_12_NAMES: tuple[str, ...] = (
+    "NoDur", "Durbl", "Manuf", "Enrgy", "Chems", "BusEq",
+    "Telcm", "Utils", "Shops", "Hlth", "Money", "Other",
+)
+
+
+@attrs.frozen(slots=True)
+class KenFrench12IndustryDaily:
+    """One trading day of the 12 value-weighted industry returns, as decimals (name order)."""
+
+    date: date
+    returns: tuple[Decimal, ...]
+
+
+def parse_12_industry_value_weighted_daily(text: str) -> list[KenFrench12IndustryDaily]:
+    """Parse the value-weighted daily section of the 12-industry file (stop at the EW section).
+
+    The file holds a value-weighted daily section then an equal-weighted one; only the first
+    (value-weighted) block of dated rows is kept. The header column order is asserted to match
+    `INDUSTRY_12_NAMES`. Missing-data markers (at or below -99) raise, as in the factor parsers.
+    """
+    lines = text.splitlines()
+    header_index = next(
+        (i for i, line in enumerate(lines) if "NoDur" in line and "Other" in line), None
+    )
+    if header_index is None:
+        raise VenueFetchError("Ken French 12-industry daily: value-weighted header not found")
+    cols = tuple(c.strip() for c in lines[header_index].split(",")[1:])
+    if cols != INDUSTRY_12_NAMES:
+        raise VenueFetchError(f"Ken French 12-industry header {cols} != {INDUSTRY_12_NAMES}")
+    out: list[KenFrench12IndustryDaily] = []
+    seen: set[date] = set()
+    for line in lines[header_index + 1 :]:
+        fields = [f.strip() for f in line.split(",")]
+        day = _parse_day(fields[0]) if fields else None
+        if day is None:
+            if out:
+                break  # the first non-dated line after the data is the equal-weighted section
+            continue
+        if len(fields) < 13:
+            continue
+        if day in seen:
+            raise VenueFetchError(f"Ken French 12-industry daily: duplicate date {day}")
+        seen.add(day)
+        rets = tuple(
+            _decimal(fields[i + 1], field=INDUSTRY_12_NAMES[i], day=fields[0]) for i in range(12)
+        )
+        out.append(KenFrench12IndustryDaily(date=day, returns=rets))
+    if not out:
+        raise VenueFetchError("Ken French 12-industry daily: no dated rows parsed")
+    out.sort(key=lambda r: r.date)
+    return out
+
+
+class KenFrench12IndustrySource:
+    """The 12-industry daily value-weighted portfolios (Study 9, ADR 0011)."""
+
+    def __init__(
+        self,
+        *,
+        url: str = _INDUSTRY_12_URL,
+        open_zip: Callable[[str], bytes] | None = None,
+        timeout: float = 60.0,
+        max_attempts: int = 4,
+        retry_backoff_s: float = 2.0,
+    ) -> None:
+        self._url = url
+        self._open_zip = open_zip
+        self._timeout = timeout
+        self._max_attempts = max_attempts
+        self._retry_backoff_s = retry_backoff_s
+
+    def _zip_text(self) -> str:
+        if self._open_zip is not None:
+            raw = self._open_zip(self._url)
+        else:
+            last_error: Exception | None = None
+            raw = b""
+            for attempt in range(self._max_attempts):
+                try:
+                    req = urllib.request.Request(self._url, headers={"User-Agent": _USER_AGENT})
+                    with urllib.request.urlopen(req, timeout=self._timeout) as resp:
+                        raw = bytes(resp.read())
+                        break
+                except (urllib.error.URLError, TimeoutError, ConnectionError) as exc:
+                    last_error = exc
+                    if attempt + 1 < self._max_attempts:
+                        time.sleep(self._retry_backoff_s * (attempt + 1))
+            else:
+                raise VenueFetchError(
+                    f"Ken French 12-industry fetch failed after {self._max_attempts} attempts"
+                ) from last_error
+        try:
+            archive = zipfile.ZipFile(io.BytesIO(raw))
+        except zipfile.BadZipFile as exc:
+            raise VenueFetchError("Ken French 12-industry response was not a valid zip") from exc
+        names = [n for n in archive.namelist() if n.lower().endswith(".csv")]
+        if not names:
+            raise VenueFetchError("Ken French 12-industry zip has no CSV member")
+        return archive.read(sorted(names)[0]).decode("utf-8", errors="strict")
+
+    def fetch_value_weighted_daily(self) -> list[KenFrench12IndustryDaily]:
+        """Fetch and parse the value-weighted daily 12-industry returns, sorted by date."""
+        return parse_12_industry_value_weighted_daily(self._zip_text())

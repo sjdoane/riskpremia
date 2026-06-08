@@ -4,7 +4,9 @@ Single source of truth for where Project RiskPremia is and what is deferred.
 Read this FIRST on any new session, then the ADRs it points to. Update after
 every meaningful work block (rule 2).
 
-Last updated: 2026-06-07 (session 18: Study 9 SELECTED and PRE-REGISTERED (industry-trend net-of-market). After the Study 8 secondary merged (PR #29), a focused fork (adversarial + deployability-realist + senior-quant design reviews, each web-searching the literature) redirected the registered cross-sectional-momentum backup: the panel found it the dominated, post-2000-flat, likely-null candidate, and the load-bearing lesson (carried from Study 8) is that the kill must be NET-OF-MARKET not net-of-bills. Data probes: French 12-industry daily VW portfolios are clean (49-industry has -99.99 markers; beta-sorted is monthly-only). DECISION (ADR 0011): absolute (time-series) industry trend on the 12-industry daily portfolios, reusing Study 6's frozen no-fit 10-month rule, scored as the strategy-MINUS-market difference PSR. Both feasibility gates pass. Build follows. PRIOR session 17: Study 8 factor-asymmetry SECONDARY built = a UNIFORM NULL (market + all 5 factors fail; WML momentum standout is a look-ahead; PR #29 merged). PRIOR session 16: Study 8 primary built NON-VIABLE (PR #28 merged), a clean Cederburg replication.).
+Last updated: 2026-06-07 (session 19: Study 9 BUILT and measured = NON-VIABLE, an honest timing null (the project's 7th honest non-make-money result). The industry-trend net-of-market gate is implemented (`src/riskpremia/indtrend/`), run, and shipped with figures on branch `feat/indtrend-gate`. RESULT (1927-2026, 25984 daily obs): the PURE-TIMING kill (strategy MINUS its own always-invested equal-weight self) PSR(0) = 0.229 (bar 0.95), annualized timing -1.54%/yr. A senior-quant pre-build design review caught a CRITICAL (the kill had to be strategy-minus-always-invested not strategy-minus-VW-market, to strip an equal-weight-vs-value-weight tilt confound; the Study 8 trap one level up), folded into an ADR 0011 amendment before code; the decomposition proves it (timing -1.54% + tilt +0.49% = deploy -1.05%, exact). The strategy's net-of-BILL PSR is 0.9998 (the equity premium, the trap) but the timing kill is null. Active-bet corr with Study 6 = 0.821 (timing-redundant). Adversarial post-impl review: SHIP (the null holds GROSS of cost). PRIOR session 18: Study 9 pre-registered (PR #30 merged). PRIOR session 17: Study 8 factor-asymmetry secondary = a uniform null (PR #29 merged).).
+
+**Study 9 (industry-trend net-of-market, ADR 0011): DONE, NON-VIABLE (an honest timing null).** Does price-trend timing beat buy-and-hold THE MARKET (the harder test Study 6 skipped, which only beat the bill)? **RESULT (1927-05..2026-04, 25984 daily obs, eff T 7312): the pure-timing kill = strategy MINUS its own always-invested equal-weight buy-and-hold, full-sample conditional PSR(0) = 0.229, far below 0.95; annualized timing -1.54%/yr (Sharpe -0.14).** DECOMPOSITION (the design-review fix, auditable + exact): timing (strategy-EW) -1.54%/yr + tilt (EW-VW market) +0.49%/yr = deploy (strategy-VW) -1.05%/yr. Context (NOT the kill): the strategy's net-of-BILL PSR is 0.9998 (the equity premium harvested by a 92%-in-market book = the Study 8 trap), standalone Sharpes strategy 0.623 > EW 0.487 > market 0.446 (the trend rule LOWERS vol + RAISES standalone Sharpe but GIVES UP return, so the timing-over-always-invested difference is negative = crash insurance not a market-beater, the SAME pattern as Study 8). Strategy time in market 91.7%, max DD 52.3%, CAGR 9.9%. Stress all below the bar: CPCV worst 0.066, recency 2000/2008/2022 = 0.378/0.347/0.143, deflated 0.066..0.032 (16..128 trials), cost 5/10/20bp = 0.229/0.220/0.202. REDUNDANCY vs Study 6: timing-diff corr -0.043 (residuals uncorrelated) BUT active-bet corr 0.821 (the two trend strategies make nearly the SAME on/off bets = timing-redundant, the adversarial's one-note-trend concern confirmed by data). FROZEN METHOD: 12 French VW industries long-when-above-10mo-MA else 1mo-bill (Study 6's no-fit rule verbatim), 1/12 weight, monthly, 5bp/side + 0.10% ER; kill = strategy-minus-always-invested-EW difference PSR; CPCV/recency/deflation(MA 6/8/10/12 + top-6 v_sr family, ladder to 128)/cost-sensitivity on the timing difference. PROCESS (rule 1): senior-quant DESIGN REVIEW (1 Critical + 2 High + several Medium) folded into an ADR 0011 design-review AMENDMENT before code (C1 the kill is strategy-minus-always-invested not strategy-minus-VW-market; widened deflation; 2000-recency; cost sensitivity; active-bet redundancy); adversarial post-impl review SHIP (no Critical/High; the decisive check: the null persists GROSS of all costs at -1.50%/yr PSR 0.326, so it's forfeited-equity-premium not a cost artifact; 2 cosmetic Medium, the gross-vs-net cost-share label renamed). The committed panel is `tests/data/indtrend_panel.csv` (Kenneth French 12-industry VW daily + market + bill, 26233 rows, SHA-stamped); artifact `artifacts/indtrend_gate.json`; figures `docs/figures/indtrend_{wealth,scorecard}.png`. Detail in `docs/research/0013-...-design.md` (fork) + `docs/research/0014-...-result.md` (result). THESIS (Studies 6/8/9): defensive equity timing (vol-timing in 8, price-trend in 9) reduces risk but does NOT beat buy-and-hold at retail net of cost; beating the market needs leverage/shorting retail can't access. NEXT: a fresh fork, or the registered low-volatility/defensive (non-trend) candidate.
 
 **Study 9 (industry-trend net-of-market, ADR 0011): SELECTED AND PRE-REGISTERED; build pending.** A deployable swing that asks whether price-trend timing beats buy-and-hold THE MARKET (not just the bill), the harder net-of-market test Study 6 did not do. Chosen by a focused fork that redirected the registered cross-sectional-momentum backup (the panel found momentum the dominated, post-2000-flat, likely-null candidate that forfeits half its alpha long-only). FROZEN METHOD (ADR 0011): the Kenneth French 12-industry daily VALUE-WEIGHTED portfolios (clean, deployable via SPDR sectors; 49-industry has -99.99 markers, beta-sorted is monthly-only); each industry held long when its TR index is above its 10-month MA else the 1mo bill (Study 6's no-fit rule VERBATIM, no re-optimization = the key DoF safeguard); fixed 1/12 weight, monthly rebalance, Study 6's cost model (5bp/side + 0.10% ER). KILL = full-sample conditional PSR(0) of the strategy-MINUS-MARKET difference series (the Study 8 lesson: a long-only equity book beats the bill on the equity premium, so net-of-market isolates timing skill); net-of-bill PSR + standalone Sharpes reported as CONTEXT; CPCV worst-fold + 2008/2022 recency + monthly difference PSR + a deflation ladder (MA-length 6/8/10/12 v_sr family) as stress; the Study-6 correlation reported for distinctness. Gate 1 (data) PASS (French 12-industry daily + factors, free/clean/redistributable, loader family extended for Study 8); Gate 2 (stress) PASS (long-or-cash, no short/leverage). Considered-and-deferred: cross-sectional industry momentum (the redirected backup; dominated/likely-null); a long-only low-volatility/defensive tilt (the orthogonal non-trend runner-up, deferred = beta-sorted French data is monthly-only + the unlevered-defensive kill statistic needs its own design pass; the registered next non-trend candidate). The fork EXPECTS a likely null (a long-or-cash trend is crash insurance, so the difference over buy-and-hold is ~0 net of cost), which with Study 8 would establish that defensive equity timing does not beat buy-and-hold at retail; a pass would beat the market. Detail in `docs/research/0013-industry-trend-net-of-market-design.md`. Next: build the gate from a committed 12-industry panel, run it, ship the verdict + figures.
 
@@ -56,10 +58,13 @@ nothing (PSR(0) 0.457); a real +1.78%/yr gross timing alpha at equal vol dies on
 leverage cap (the dominant drag) and net-of-cost frictions, so volatility timing adds no deployable
 value over buy-and-hold. It is near-orthogonal to Study 6 (difference correlation 0.042); its
 factor-asymmetry secondary is also a uniform null (the market and all five French factors fail; the
-momentum standout is a look-ahead). Study 9 (industry-trend net-of-market, ADR 0011) is selected and
-pre-registered: does price-trend timing beat buy-and-hold THE MARKET (the harder net-of-market test
-Study 6 skipped), on the clean French 12-industry daily portfolios with Study 6's frozen no-fit rule.
-**Next step: build the Study 9 industry-trend net-of-market gate and ship the verdict.**
+momentum standout is a look-ahead). Study 9 (industry-trend net-of-market, ADR 0011) is DONE and NON-VIABLE: an honest timing null. The
+pure-timing kill (the strategy minus its own always-invested equal-weight self) clears nothing
+(PSR(0) 0.229, annualized timing -1.54%/yr); the trend rule reduces risk but gives up return, so it
+does not beat always-invested net of cost, and it is timing-redundant with Study 6 (active-bet
+correlation 0.821). With Study 8 this establishes that defensive equity timing does not beat
+buy-and-hold at retail.
+**Next step: a fresh fork, or the registered low-volatility/defensive (non-trend) candidate.**
 Repo: https://github.com/sjdoane/riskpremia.
 
 ## Dev commands (Windows PowerShell; the venv is run DIRECTLY)
@@ -84,6 +89,9 @@ $py = "C:\Users\SamJD\.venvs\riskpremia\Scripts\python.exe"
 & $py -m scripts.regenerate_dispersion_figures # render docs/figures/funding_dispersion_*.png from the committed Study 7 series + artifact
 & $py -m scripts.run_volmanaged_gate  # no-network: committed Study 6 panel -> committed Study 8 volatility-managed gate artifact
 & $py -m scripts.regenerate_volmanaged_figures # render docs/figures/volmanaged_*.png from the committed panel + Study 8 artifact
+& $py -m scripts.build_indtrend_inputs  # one-time: fetch French 12-industry + factors -> committed Study 9 panel + stamp
+& $py -m scripts.run_indtrend_gate  # no-network: committed panel -> committed Study 9 industry-trend gate artifact
+& $py -m scripts.regenerate_indtrend_figures # render docs/figures/indtrend_*.png from the committed panel + Study 9 artifact
 & $py -m scripts.build_volmanaged_factor_inputs # one-time: fetch French 5-factor + momentum daily -> committed Study 8 factor panel + stamp
 & $py -m scripts.run_volmanaged_factor_asymmetry # no-network: committed factor panel -> committed Study 8 factor-asymmetry artifact
 & $py -m scripts.build_vrp_artifact # one-time: fetch live data -> committed VRP artifact + fixtures + manifest stamp
@@ -172,8 +180,18 @@ matplotlib, render-only; CI installs only `.[dev]` and skips the figure render t
   SHA-stamped) + `artifacts/volmanaged_factor_asymmetry.json` + the figure; a UNIFORM NULL (market
   and all 5 factors fail; the WML standout is a look-ahead that dies under the real-time c). The
   data layer gained `KenFrenchFactorsSource` (5-factor + momentum daily loaders, additive).
-- 298 offline pass + 18 live `network` tests (the figure render tests run
-  locally, skipif in CI); mypy strict (src + scripts, 91 source files) / ruff /
+- `indtrend/` + `scripts/{build_indtrend_inputs,run_indtrend_gate,regenerate_indtrend_figures}.py`
+  (Study 9): the industry-trend net-of-market gate (an honest timing null). `gate.py` (a 12-sleeve
+  long-or-cash trend simulator generalizing Study 6's, the strategy / always-invested-equal-weight /
+  value-weight-market series, the PURE-TIMING kill = strategy-minus-always-invested difference PSR,
+  the timing/tilt/deploy decomposition, the net-of-bill context, CPCV/recency/deflation stress, the
+  cost sensitivity, and the Study-6 active-bet redundancy), `fixtures.py`, `figures.py`, `errors.py`;
+  the 12-industry VW loader added to `data/sources/ken_french.py`. The committed panel is
+  `tests/data/indtrend_panel.csv` (26233 rows, SHA-stamped), the artifact `artifacts/indtrend_gate.json`,
+  figures `docs/figures/indtrend_{wealth,scorecard}.png`; an offline test reproduces it to the digit.
+  Verdict: NON-VIABLE (pure-timing PSR 0.229; full numbers above + in `docs/research/0014-...-result.md`).
+- 311 offline pass + 18 live `network` tests (the figure render tests run
+  locally, skipif in CI); mypy strict (src + scripts, 99 source files) / ruff /
   em-dash clean; CI green
   (`.github/workflows/ci.yml`, installs `.[dev]`, runs ruff + mypy + `pytest -m "not
   network"`, so CI runs the offline set).
@@ -311,7 +329,8 @@ measurement pivot, built and measured; the implementation-amendment footer recor
 USDT-identity join + the top-15 universe), ADR 0010 (volatility-managed market-portfolio pivot,
 built and measured NON-VIABLE; the design-review amendment makes the managed-minus-unmanaged
 difference the kill and moves c to the uncapped series with an expanding-window OOS check), ADR 0011
-(industry-trend net-of-market pivot, pre-registered, build pending).
+(industry-trend net-of-market pivot, built and measured NON-VIABLE; the design-review amendment
+makes the kill the strategy-minus-always-invested timing difference, not net-of-VW-market).
 `docs/research/0001-data-layer-design.md` (the reviewed data-layer design),
 `docs/research/0007-cross-asset-trend-feasibility.md` (the Study 6 candidate survey + data probe),
 `docs/research/0008-cross-asset-trend-gate-design.md` (the Study 6 gate design, result, and reviews),
@@ -319,6 +338,7 @@ difference the kill and moves c to the uncapped series with an expanding-window 
 `docs/research/0010-funding-dispersion-measurement-result.md` (the Study 7 measured result + post-impl review),
 `docs/research/0011-volatility-managed-equity-design.md` (the Study 8 fork, four-lens + adversarial review, literature check, and method),
 `docs/research/0012-volatility-managed-equity-result.md` (the Study 8 measured non-viable result + the gross decomposition + post-impl review + the factor-asymmetry secondary),
-`docs/research/0013-industry-trend-net-of-market-design.md` (the Study 9 fork, panel findings, literature check, data probes, and method).
+`docs/research/0013-industry-trend-net-of-market-design.md` (the Study 9 fork, panel findings, literature check, data probes, and method),
+`docs/research/0014-industry-trend-net-of-market-result.md` (the Study 9 measured timing null + the decomposition + post-impl review).
 CHANGELOG.md (every review finding + resolution). The `project_riskpremia` memory
 note (cross-session summary). README.md (the reviewer-facing front door).
