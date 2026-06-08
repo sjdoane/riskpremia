@@ -209,3 +209,83 @@ the honesty guardrails above are pre-registered. The candidate survey, the four-
 adversarial findings, the literature check, and the data-path verification are in
 `docs/research/0011-volatility-managed-equity-design.md`. The build and the measured result
 follow.
+
+## Design-review amendment (2026-06-07, before implementation)
+
+An independent senior-quant design review of this pre-registration returned two Critical, three
+High, and four Medium findings, all folded in here before any code. The two Critical findings
+change what the gate measures, so they revise the frozen method above; the original text is
+superseded where it conflicts with this amendment.
+
+1. **Critical: the primary kill is the managed-MINUS-unmanaged difference series, not the
+   standalone managed PSR.** The c-normalized managed market is a levered-but-equal-volatility
+   long equity position that sits in the market roughly all the time on average, so its standalone
+   full-sample PSR(0) is passed by the equity premium itself (buy-and-hold already clears 0.95 on
+   this window) and says nothing about volatility timing. The headline deployability and
+   adjudication kill is therefore the full-sample conditional PSR(0) of the
+   `managed_excess minus unmanaged_excess` series against the 0.95 bar (the direct Cederburg
+   framing). The standalone managed PSR(0) and the managed-versus-unmanaged annualized Sharpe pair
+   are reported as context, explicitly labeled as dominated by the equity premium rather than the
+   kill. The non-overlapping monthly PSR(0) is reported for the difference series, not only the
+   level.
+
+2. **Critical: `c` is computed on the UNCAPPED weight, with the 2.0 cap applied as a separate
+   disclosed friction, and an expanding-window `c` is a first-class sensitivity.** The full-sample
+   `c` is Sharpe-neutral only on the uncapped, costless series (the Moreira-Muir identifying
+   convention); once the cap clips the high-weight months and costs scale with the weight, a
+   full-sample `c` is look-ahead sitting on the exact knob the verdict is most sensitive to.
+   Resolution: solve `c` on the uncapped series so the uncapped managed full-sample volatility
+   equals the unmanaged volatility, then apply the cap as an implementation constraint; and report
+   an expanding-window real-time `c` (a burn-in of the first 60 months, then `c` recomputed each
+   month from data through `m-1`) as a headline-adjacent stress row that must give the same
+   verdict. The signal `RV_{m-1}` is strictly point-in-time, but the full-sample `c` is an
+   in-sample normalization and is described as such (not as point-in-time).
+
+3. **High: the no-fit CPCV inheritance from Study 6 holds only under the uncapped `c`.** Under the
+   uncapped convention `c` is a near-pure scale that does not reorder fold-level Sharpe, so the
+   no-fit treatment (worst held-out fold reported, path-stitching skipped as degenerate) is
+   retained and documented as such; the expanding-window `c` row is the true out-of-sample check.
+   The Study 6 CPCV-degeneracy justification is restated for a c-normalized rule, not copied
+   verbatim.
+
+4. **High: one coherent cost model, with a conservative financing spread.** The deployable
+   implementation is a single model: a broad-market plain ETF base plus explicit margin financing
+   on the levered portion, no leveraged ETF (the leveraged-ETF mention above is demoted to an
+   unmodeled alternative). The charges are the expense ratio on the equity exposure (10 bps per
+   year), the financing spread on the levered portion `max(w - 1, 0)` over the bill, and the
+   per-side turnover cost on the continuous monthly weight change `abs(w_m - w_{m-1})`. The
+   financing spread is the load-bearing assumption (Barroso and Detzel locate factor death in the
+   scaling-turnover and financing cost), so the primary is a conservative retail level (1.0 percent
+   per year over the bill), with 0.5 percent as an optimistic edge and a higher retail-margin level
+   as the stress bracket. The unmanaged benchmark carries the same expense ratio for a like-for-like
+   comparison and no financing or turnover (its weight is constant).
+
+5. **High: the deflation reflects the literature's search, not just the internal grid.** The
+   cross-trial Sharpe variance `v_sr` is proxied from a family of structurally different
+   specifications (realized-variance window variants and at least one alternative estimator such as
+   an exponentially-weighted variance, plus cap variants), not only rescalings of one signal, and
+   the Deflated-Sharpe trial ladder is extended well beyond 8/16/32 (to the order of 100) to
+   reflect that the volatility-managed literature has searched the estimator-by-factor space
+   heavily. The deflated Sharpe at the high rungs is reported as the honest stress; a difference
+   series that clears only at a low trial count is reported as marginal.
+
+6. **Medium: the secondary factor-asymmetry is built as a stacked follow-up with a pre-registered
+   decision rule, and the factors carry a turnover-only cost.** The long-short French factors
+   cannot be levered through a market ETF, so the managed factor return is scored on the
+   `managed minus unmanaged` difference with the per-side turnover cost only and no financing leg
+   (charging the market financing line on a long-short factor is a category error). The asymmetry
+   is pre-registered as confirmed only if the managed-market difference clears the deflated bar and
+   at least four of the five managed-factor differences (SMB, HML, RMW, CMA, WML) do not; any other
+   pattern is reported as not confirmed. The secondary needs the French five-factor and momentum
+   daily files (a new committed fixture) and is built and shipped in the immediate follow-up after
+   the primary, so the primary gate ships first.
+
+7. **Medium: the redundancy-with-Study-6 check reports more than the level correlation.** Because
+   both strategies are long equity much of the time, the daily level correlation is high by
+   construction and is not the redundancy test. The artifact reports the active-bet correlation
+   (the managed `w - 1` versus the Study 6 equity on/off), the correlation of the managed-minus-
+   unmanaged difference with the Study 6 excess, and the incremental Sharpe of an equal-weight
+   combination versus each alone.
+
+The first build ships the primary managed-market gate with findings 1 to 5 and 7 folded in; the
+secondary factor-asymmetry (finding 6) is the immediate stacked follow-up.
