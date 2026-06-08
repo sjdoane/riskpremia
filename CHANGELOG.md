@@ -3,6 +3,47 @@
 What shipped, plus every review finding and its resolution (rule 2). Newest
 first. This is the audit trail; STATUS.md is the current-state snapshot.
 
+## 2026-06-07, session 18: Study 9 pivot, industry-trend net-of-market (pre-registration)
+
+After the Study 8 factor-asymmetry secondary merged (PR #29), a focused fork selected Study 9.
+Shipped docs-only (pivot pre-registration before any code):
+
+- `docs/decisions/0011-pivot-to-industry-trend-net-of-market.md`: the decision, the frozen rule,
+  the net-of-market kill design, the honesty guardrails, and the two pre-code feasibility gates.
+- `docs/research/0013-industry-trend-net-of-market-design.md`: the fork, the three panel reviews,
+  the literature check, and the data probes.
+- README / STATUS / pyproject pointers.
+
+**Selection.** The registered backup was cross-sectional industry/sector momentum. A focused fork
+(an adversarial direction review, a deployability realist, and a senior-quant design review, each
+web-searching the literature) plus two live data probes redirected it. The panel found cross-
+sectional industry momentum the dominated, likely-null candidate: its cross-sectional premium is
+roughly flat from 2000 onward (the regime the deflated gate stresses), it is largely subsumed by
+the broad momentum factor, and the long-only retail version forfeits about half the academic alpha
+while carrying full market beta. The load-bearing methodology lesson, carried from Study 8: the kill
+must be net-of-market, not net-of-bills, because a long-only equity book beats the bill on the
+equity premium alone. The panel's plurality pivot was absolute (time-series) industry trend.
+
+**Data probes.** The Kenneth French 12-industry daily value-weighted portfolios are clean and
+complete and map to the deployable SPDR sector funds; the 49-industry set carries `-99.99` missing
+markers in early decades; the beta-sorted (low-volatility) portfolios are monthly only.
+
+**Decision.** Build absolute industry trend on the 12-industry daily portfolios, reusing Study 6's
+frozen no-fit ten-month rule verbatim (no re-optimization, the key degrees-of-freedom safeguard),
+scored as the full-sample conditional PSR(0) of the strategy-minus-market difference series. It
+fills a distinct cell: Study 6 only beat the bill, while this asks whether price-trend timing beats
+the market. The fork expects a likely null (a long-or-cash trend is crash insurance, so the
+difference over buy-and-hold is near zero net of cost), which with Study 8 would establish that
+defensive equity timing does not beat buy-and-hold at retail; a pass would be a genuinely strong
+deployable result. The genuinely orthogonal low-volatility tilt is the registered next candidate,
+deferred because its data is monthly only and its kill statistic needs its own design pass.
+
+**Feasibility gates (PASS).** Gate 1 (data): the 12-industry daily portfolios and the factors are
+free, keyless, reproducible, redistribution-permitted, with the loader family extended for Study 8.
+Gate 2 (stress): long-or-cash with no shorting and no leverage cannot destroy a small account.
+
+Verification: docs-only pivot pre-registration. The implementation and the measured result follow.
+
 ## 2026-06-07, session 17: Study 8 factor-asymmetry secondary (a uniform null)
 
 The pre-registered factor-asymmetry secondary (ADR 0010 amendment finding 6) is implemented, run,

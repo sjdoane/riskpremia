@@ -51,7 +51,15 @@ of candidate premia:
    null).** A real gross volatility-timing alpha of +1.78%/yr at equal volatility does not survive
    the 2.0x retail leverage cap (the dominant drag) and net-of-cost frictions; the difference
    clears nothing (PSR(0) 0.457) and is near-orthogonal to Study 6
-   ([ADR 0010](docs/decisions/0010-pivot-to-volatility-managed-equity.md)).
+   ([ADR 0010](docs/decisions/0010-pivot-to-volatility-managed-equity.md)). The factor-asymmetry
+   secondary is a uniform null: the market and all five French factors fail, and the momentum
+   standout is a look-ahead.
+9. **Industry-trend net-of-market** (Study 9): a retail-deployable swing asking whether price-trend
+   timing beats buy-and-hold the market (not just the bill, the harder test Study 6 skipped), on the
+   clean Kenneth French 12-industry daily portfolios, reusing Study 6's frozen no-fit ten-month rule
+   and scored as the strategy-minus-market difference. Selected after a focused fork redirected the
+   cross-sectional-momentum backup; build pending
+   ([ADR 0011](docs/decisions/0011-pivot-to-industry-trend-net-of-market.md)).
 
 Sibling to [pit-backtest](https://github.com/sjdoane/pit-backtest), whose headline was a
 *reproducible honest momentum null*. The contribution here is the same: cost realism,
@@ -71,7 +79,10 @@ failure.
 > volatility-managed market portfolio that adjudicates the contested Moreira-Muir claim on the
 > deflated net-of-cost gate, is done: a clean Cederburg replication, the sixth honest null, where
 > a real gross timing alpha dies on the retail leverage cap and costs
-> ([ADR 0010](docs/decisions/0010-pivot-to-volatility-managed-equity.md)). Live state is
+> ([ADR 0010](docs/decisions/0010-pivot-to-volatility-managed-equity.md)). Study 9, an
+> industry-trend net-of-market study asking whether price-trend timing beats the market (not just
+> the bill), is pre-registered
+> ([ADR 0011](docs/decisions/0011-pivot-to-industry-trend-net-of-market.md)). Live state is
 > always in [STATUS.md](STATUS.md).
 
 ## Study 6 result: a cross-asset defensive trend (the first qualified pass)
