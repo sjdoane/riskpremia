@@ -3,6 +3,46 @@
 What shipped, plus every review finding and its resolution (rule 2). Newest
 first. This is the audit trail; STATUS.md is the current-state snapshot.
 
+## 2026-06-07, session 20: Study 10 pivot, a long-only quality (profitability) tilt (pre-registration)
+
+After the Study 9 industry-trend null merged (PR #31), a fork selected Study 10. Shipped docs-only
+(pivot pre-registration before any code):
+
+- `docs/decisions/0012-pivot-to-quality-tilt.md`: the decision, the frozen method, the net-of-market
+  kill, the Fama-French attribution, the honesty guardrails, and the two pre-code feasibility gates.
+- `docs/research/0015-quality-tilt-design.md`: the fork, the adversarial redirect, the literature
+  check, and the data probes.
+- README / STATUS / pyproject pointers.
+
+**Selection.** The registered backup was a long-only low-volatility (low-beta) tilt. An adversarial
+cross-check redirected it: the unlevered retail form of low-volatility is lower volatility for lower
+absolute return, a risk-adjusted result that re-proves the Studies 6/8/9 thesis (less risk, no excess
+return) rather than advancing the make-money goal; low-volatility is the most crowded and decayed
+major factor; and its clean Kenneth French series is monthly only. The alternative, a long-only
+profitability (quality) tilt, is the one major factor whose long leg carries a positive absolute
+return tilt (so a net-of-market pass, a genuine make-money result, is possible), the least crowded
+and most out-of-sample-robust factor, low-turnover (so the deflated net-of-cost gate is where quality
+is strongest), and available daily.
+
+**Data probes.** `Portfolios_Formed_on_OP_Daily` is clean (value-weighted daily, 1963 to 2026, 15813
+rows, zero missing markers, with the `Hi 30` and `Hi 20` high-profitability legs); the beta-sorted
+low-volatility portfolios are monthly only and the daily variance files return HTTP 404.
+
+**Decision.** Hold the high-operating-profitability value-weighted portfolio (the `Hi 30` tercile
+headline), scored as the full-sample conditional PSR(0) of the high-profitability-minus-market
+difference. Both legs are value-weighted, so the difference is a clean net-of-market comparison with
+no equal-weight-versus-value-weight confound (the seam the Study 9 design review caught), reusing the
+Study 8 and Study 9 difference-kill machinery. A Fama-French regression attributes the difference to
+pure profitability versus bundled size, value, and beta tilts. It is the first candidate with a
+genuine make-money shot since Study 6; a null is still an honest result. The low-volatility tilt is
+the deferred candidate, and a value (HML) tilt was weighed and deferred as more cyclical.
+
+**Feasibility gates (PASS).** Gate 1 (data): the operating-profitability portfolios and the factors
+are free, keyless, reproducible, daily, and clean. Gate 2 (stress): long-only with no shorting and no
+leverage cannot destroy a small account.
+
+Verification: docs-only pivot pre-registration. The implementation and the measured result follow.
+
 ## 2026-06-07, session 19: Study 9 build, the industry-trend net-of-market gate (a timing null)
 
 The gate pre-registered in ADR 0011 is implemented, run, and shipped with figures on

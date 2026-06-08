@@ -62,6 +62,14 @@ of candidate premia:
    trend rule clears nothing (PSR(0) 0.229, annualized timing -1.54%/yr): it reduces risk but gives
    up return, and it is timing-redundant with Study 6 (active-bet correlation 0.82)
    ([ADR 0011](docs/decisions/0011-pivot-to-industry-trend-net-of-market.md)).
+10. **Long-only quality (profitability) tilt** (Study 10): the first candidate with a genuine
+    make-money shot since Study 6, asking whether holding the high-profitability portfolio beats
+    buy-and-hold the market net of cost. On clean daily Kenneth French operating-profitability
+    portfolios, scored as the high-profitability-minus-market difference (both value-weighted, so a
+    clean net-of-market comparison) with a Fama-French attribution. Profitability is the one major
+    factor with a positive absolute long-leg tilt and low turnover. Selected after an adversarial
+    fork redirected the registered low-volatility backup; build pending
+    ([ADR 0012](docs/decisions/0012-pivot-to-quality-tilt.md)).
 
 Sibling to [pit-backtest](https://github.com/sjdoane/pit-backtest), whose headline was a
 *reproducible honest momentum null*. The contribution here is the same: cost realism,
@@ -86,7 +94,10 @@ failure.
 > the bill), is done: an honest timing null where the trend rule reduces risk but gives up return,
 > the seventh honest result and (with Study 8) evidence that defensive equity timing does not beat
 > buy-and-hold at retail
-> ([ADR 0011](docs/decisions/0011-pivot-to-industry-trend-net-of-market.md)). Live state is
+> ([ADR 0011](docs/decisions/0011-pivot-to-industry-trend-net-of-market.md)). Study 10, a long-only
+> quality (profitability) tilt and the first candidate with a genuine make-money shot since Study 6,
+> is pre-registered
+> ([ADR 0012](docs/decisions/0012-pivot-to-quality-tilt.md)). Live state is
 > always in [STATUS.md](STATUS.md).
 
 ## Study 6 result: a cross-asset defensive trend (the first qualified pass)
