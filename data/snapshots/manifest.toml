@@ -128,6 +128,32 @@ rows = 1
 note = "Committed provenance for tests/data/funding_dispersion_series.csv: the CTREND panel hash used for eligibility, the funding source, the build parameters, and the fetch date."
 
 [[snapshot]]
+name = "indtrend-panel"
+venue = "ken_french"
+instrument = "12-industry-vw-daily"
+kind = "reproducibility_fixture"
+relpath = "tests/data/indtrend_panel.csv"
+source_url = "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/12_Industry_Portfolios_daily_CSV.zip"
+fetched_utc = 2026-06-08T21:02:58+00:00
+sha256 = "1ea663305900a96ca0cb310dc76ddc4c537f57d9cb4fcaba8d7d0c8775c83ba9"
+size_bytes = 2924194
+rows = 26233
+note = "Committed daily Kenneth French 12-industry value-weighted panel (12 industries + the value-weight market + the one-month bill) for the Study 9 industry-trend study. As-of snapshot; the SHA256 attests tamper-evidence of the committed series."
+
+[[snapshot]]
+name = "indtrend-sources"
+venue = "ken_french"
+instrument = "12-industry-vw-daily"
+kind = "reproducibility_fixture"
+relpath = "tests/data/indtrend_panel_sources.json"
+source_url = "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Research_Data_Factors_daily_CSV.zip"
+fetched_utc = 2026-06-08T21:02:58+00:00
+sha256 = "875ecbf0dda75a53908e7440ebcd918ea12a62e6c39e5a7c7db021a2eb03007e"
+size_bytes = 519
+rows = 1
+note = "Committed provenance for tests/data/indtrend_panel.csv."
+
+[[snapshot]]
 name = "volmanaged-factor-panel"
 venue = "ken_french"
 instrument = "five-factor-plus-momentum-daily"

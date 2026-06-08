@@ -3,6 +3,62 @@
 What shipped, plus every review finding and its resolution (rule 2). Newest
 first. This is the audit trail; STATUS.md is the current-state snapshot.
 
+## 2026-06-07, session 19: Study 9 build, the industry-trend net-of-market gate (a timing null)
+
+The gate pre-registered in ADR 0011 is implemented, run, and shipped with figures on
+`feat/indtrend-gate`.
+
+- `src/riskpremia/indtrend/`: `gate.py` (a 12-sleeve long-or-cash trend simulator generalizing
+  Study 6's, the strategy / always-invested-equal-weight / value-weight-market net series, the
+  pure-timing kill = the strategy-minus-always-invested difference PSR(0), the timing/tilt/deploy
+  decomposition, the net-of-bill context, the CPCV worst fold and 2000/2008/2022 recency stress, a
+  deflation ladder over a moving-average-length and breadth family, the cost sensitivity, and the
+  Study-6 active-bet redundancy), `fixtures.py` (the committed panel), `figures.py`, `errors.py`.
+- `data/sources/ken_french.py`: the 12-industry value-weighted daily loader (additive).
+- Scripts: `build_indtrend_inputs.py` (network, fetches the industry portfolios and the factors and
+  commits the panel), `run_indtrend_gate.py` (no-network), `regenerate_indtrend_figures.py`.
+- Committed outputs: `tests/data/indtrend_panel.csv` (26233 rows, SHA-stamped) + provenance,
+  `artifacts/indtrend_gate.json`, `docs/figures/indtrend_{wealth,scorecard}.png`.
+- Tests: the gate building blocks, the offline reproduction to the digit, the decomposition
+  identity, the honest-null framing, and the figure render (skipif matplotlib). 311 offline pass.
+- `docs/research/0014-industry-trend-net-of-market-result.md`: the result note. README / STATUS /
+  pyproject updated.
+
+**Result (1927-05 to 2026-04, 25984 daily obs, effective T 7312): NON-VIABLE, an honest timing
+null.** The pure-timing kill (the strategy minus its own always-invested equal-weight buy-and-hold)
+has a full-sample conditional PSR(0) of 0.229, far below 0.95; the annualized timing return is
+-1.54%/yr. The decomposition is exact: timing (-1.54%/yr) plus the static equal-weight-over-value-
+weight tilt (+0.49%/yr) equals the strategy-minus-market deploy difference (-1.05%/yr). The
+strategy's net-of-bill PSR is 0.9998 (the equity premium, the Study 8 trap, reported as context not
+the kill), and its standalone Sharpe (0.62) exceeds the always-invested benchmark (0.49) because the
+trend rule lowers volatility while giving up return, so the timing-over-always-invested difference is
+negative. Every stress slice is below the bar. The active-bet correlation with Study 6 is 0.821: the
+two trend strategies make nearly the same on/off bets, so Study 9 is timing-redundant with Study 6.
+
+#### Design review (pre-build) and resolution
+
+A senior-quant design review of the build plan returned one Critical, two High, and several Medium
+findings, all folded into the ADR 0011 design-review amendment before any code. The Critical: the
+pre-registered net-of-value-weight-market kill conflates the trend-timing with a static
+equal-weight-versus-value-weight industry tilt (the Study 8 equity-premium trap one level up), so the
+headline kill was changed to the strategy minus its own always-invested equal-weight buy-and-hold
+(pure timing), with net-of-market demoted to deployable context and the tilt reported as the bridge.
+The Highs widened the deflation v_sr family and made the cost realism explicit; the Mediums added the
+2000-onward recency slice and the active-bet redundancy statistic.
+
+#### Post-implementation review and resolution
+
+An adversarial post-implementation review returned a SHIP verdict with no Critical or High findings.
+It reproduced the artifact to 1e-9, re-derived the decomposition identity (gap 1.7e-18), confirmed no
+leverage and no look-ahead, and ran the decisive adversarial check: the timing null persists gross of
+all costs (the cost-free timing difference is -1.50%/yr, PSR 0.326; costs add only -0.04%/yr), so it
+is a real forfeited-equity-premium result, not a cost or benchmark artifact. Two Medium findings,
+both cosmetic and reported-context only: the ten-month burn-in is correct (it matches Study 6), and a
+local cost-share denominator was mislabeled "gross" when it divides by the net-compounded terminal,
+now renamed (the value is unchanged, so the artifact is byte-identical).
+
+Verification: 311 offline pass, mypy strict clean (99 source files), ruff clean, em-dash clean.
+
 ## 2026-06-07, session 18: Study 9 pivot, industry-trend net-of-market (pre-registration)
 
 After the Study 8 factor-asymmetry secondary merged (PR #29), a focused fork selected Study 9.

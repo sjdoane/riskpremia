@@ -55,10 +55,12 @@ of candidate premia:
    secondary is a uniform null: the market and all five French factors fail, and the momentum
    standout is a look-ahead.
 9. **Industry-trend net-of-market** (Study 9): a retail-deployable swing asking whether price-trend
-   timing beats buy-and-hold the market (not just the bill, the harder test Study 6 skipped), on the
-   clean Kenneth French 12-industry daily portfolios, reusing Study 6's frozen no-fit ten-month rule
-   and scored as the strategy-minus-market difference. Selected after a focused fork redirected the
-   cross-sectional-momentum backup; build pending
+   timing beats buy-and-hold (not just the bill, the harder test Study 6 skipped), on the clean
+   Kenneth French 12-industry daily portfolios, reusing Study 6's frozen no-fit ten-month rule.
+   **Result: an honest timing null.** Scored as the strategy minus its own always-invested self
+   (pure timing, after a design review stripped an equal-weight-vs-value-weight tilt confound), the
+   trend rule clears nothing (PSR(0) 0.229, annualized timing -1.54%/yr): it reduces risk but gives
+   up return, and it is timing-redundant with Study 6 (active-bet correlation 0.82)
    ([ADR 0011](docs/decisions/0011-pivot-to-industry-trend-net-of-market.md)).
 
 Sibling to [pit-backtest](https://github.com/sjdoane/pit-backtest), whose headline was a
@@ -81,7 +83,9 @@ failure.
 > a real gross timing alpha dies on the retail leverage cap and costs
 > ([ADR 0010](docs/decisions/0010-pivot-to-volatility-managed-equity.md)). Study 9, an
 > industry-trend net-of-market study asking whether price-trend timing beats the market (not just
-> the bill), is pre-registered
+> the bill), is done: an honest timing null where the trend rule reduces risk but gives up return,
+> the seventh honest result and (with Study 8) evidence that defensive equity timing does not beat
+> buy-and-hold at retail
 > ([ADR 0011](docs/decisions/0011-pivot-to-industry-trend-net-of-market.md)). Live state is
 > always in [STATUS.md](STATUS.md).
 
@@ -218,6 +222,42 @@ python -m scripts.regenerate_volmanaged_figures
 # rebuild the gate and asymmetry artifacts from the committed panels (no network)
 python -m scripts.run_volmanaged_gate
 python -m scripts.run_volmanaged_factor_asymmetry
+```
+
+## Study 9 result: industry trend net-of-market (an honest timing null)
+
+Does price-trend timing beat buy-and-hold, not just the bill? Each of the 12 Kenneth French
+industries is held long when it is above its ten-month moving average (Study 6's frozen rule), else
+in the bill. A design review caught that the strategy fully invested is an equal-weight industry
+book, not the value-weight market, so the honest kill is the strategy minus its own always-invested
+self (pure timing), with net-of-market kept as deployable context. 1927 to 2026.
+
+| Quantity | Value |
+| --- | --- |
+| Pure-timing kill (strategy minus always-invested) PSR(0) | **0.229** (bar 0.95) |
+| Timing annualized return / Sharpe | **-1.54%/yr / -0.14** |
+| Decomposition: timing + tilt = deploy (per year) | **-1.54% + 0.49% = -1.05%** |
+| Context: strategy net-of-bill PSR(0) | **0.9998** (the equity premium, not the kill) |
+| Standalone Sharpe: strategy / always-invested / market | 0.62 / 0.49 / 0.45 |
+| Active-bet correlation with Study 6 | **0.82** (timing-redundant) |
+
+An honest **timing null**. The strategy's net-of-bill PSR is a near-perfect 0.9998, but that is the
+equity premium harvested by a book that is 92% in the market (the same trap Study 8 exposed); only
+the strategy-minus-its-own-always-invested-self isolates the timing, and it is negative
+(-1.54%/yr). The trend rule lowers volatility (its standalone Sharpe beats always-invested) but
+gives up return, so it does not make money over always-invested net of cost: it is crash insurance,
+not a market-beater. The decomposition is exposed and exact, and the active-bet correlation of 0.82
+shows the strategy makes nearly the same on/off bets as Study 6. With Study 8, this establishes that
+defensive equity timing, however the timer is built, does not beat buy-and-hold at retail.
+
+![Industry trend vs always-invested vs market net wealth](docs/figures/indtrend_wealth.png)
+
+![Net-of-bill clears on the equity premium; the timing kill fails](docs/figures/indtrend_scorecard.png)
+
+```powershell
+# render the figures, then rebuild the gate artifact from the committed panel (no network)
+python -m scripts.regenerate_indtrend_figures
+python -m scripts.run_indtrend_gate
 ```
 
 ## Study 2 result: the BTC variance risk premium

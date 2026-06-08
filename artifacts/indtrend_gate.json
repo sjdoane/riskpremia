@@ -1,0 +1,179 @@
+{
+  "caveats": [
+    "The kill is the strategy MINUS its own always-invested equal-weight buy-and-hold (pure trend-timing). A long-only equity strategy beats the bill on the equity premium, and beats the value-weight market partly on a static equal-weight tilt, so neither is the timing test.",
+    "The strategy-minus-value-weight-market difference is reported as deployable context (does this beat holding the market?); the equal-weight-minus-value-weight tilt is the bridge, and strategy-minus-VW equals timing plus tilt by construction.",
+    "The ten-month rule is frozen verbatim from Study 6 with no re-optimization for this universe; the moving-average-length and top-k breadth variants are a deflation family, not a search.",
+    "Costs are 5 bps per side on the continuous monthly weight change plus a 0.10 percent annual expense on held industry notional (inactive sleeves earn the bill with no expense); a 10 and 20 bps turnover sensitivity is reported because 12 sector funds churn more than two sleeves."
+  ],
+  "cost_model": {
+    "basis": "0.10%/yr expense on held notional + per-side turnover on the weight change",
+    "expense_annual": 0.001,
+    "turnover_cost_per_side": 0.0005
+  },
+  "data_end": "2026-04-30",
+  "data_start": "1926-07-01",
+  "fingerprint": {
+    "n_panel_rows": 26233,
+    "panel_relpath": "tests/data/indtrend_panel.csv",
+    "panel_sha256": "1ea663305900a96ca0cb310dc76ddc4c537f57d9cb4fcaba8d7d0c8775c83ba9",
+    "provenance_relpath": "tests/data/indtrend_panel_sources.json",
+    "provenance_sha256": "875ecbf0dda75a53908e7440ebcd918ea12a62e6c39e5a7c7db021a2eb03007e"
+  },
+  "first_scored_date": "1927-05-02",
+  "knobs": {
+    "expense_annual": 0.001,
+    "sma_months": 10,
+    "top_k": 0,
+    "trading_days_per_year": 252.0,
+    "turnover_cost_per_side": 0.0005,
+    "viability_bar": 0.95
+  },
+  "last_scored_date": "2026-04-30",
+  "n_scored_days": 25984,
+  "schema_version": 1,
+  "score": {
+    "context": {
+      "deploy_diff_psr_zero": 0.36514482774743495,
+      "ew_ann_sharpe": 0.4874134007244155,
+      "market_ann_sharpe": 0.4462417432384038,
+      "strategy_ann_sharpe": 0.6233643006968109,
+      "strategy_net_of_bill_psr_zero": 0.9997690784543929
+    },
+    "cost_sensitivity": [
+      {
+        "full_psr_zero": 0.22908884490353043,
+        "total_cost_share": 0.02035242072301781,
+        "turnover_cost_per_side": 0.0005
+      },
+      {
+        "full_psr_zero": 0.21992377621295262,
+        "total_cost_share": 0.03223728724663577,
+        "turnover_cost_per_side": 0.001
+      },
+      {
+        "full_psr_zero": 0.20242760745655197,
+        "total_cost_share": 0.056739001288090334,
+        "turnover_cost_per_side": 0.002
+      }
+    ],
+    "cpcv": {
+      "fold_median": 0.42365792363653687,
+      "fold_min": 0.06551192158689417,
+      "fold_psr_zero": [
+        0.3709720531217584,
+        0.5569920603236334,
+        0.42365792363653687,
+        0.4954745111990571,
+        0.22985576810561192,
+        0.5520001743342816,
+        0.06999327435969305,
+        0.48520742632222064,
+        0.13437006404041912,
+        0.426615978197034,
+        0.5844571487728248,
+        0.4066966941523387,
+        0.4429660007945652,
+        0.06551192158689417,
+        0.3229975256398404
+      ],
+      "k_test": 2,
+      "min_test_size": 8660,
+      "n_groups": 6,
+      "n_splits": 15
+    },
+    "decomposition": {
+      "deploy_ann_return": -0.010519785522518242,
+      "tilt_ann_return": 0.004910435502476538,
+      "timing_ann_return": -0.015430221024994781
+    },
+    "deflation": {
+      "dsr_by_trials": [
+        0.06647962608527969,
+        0.051652810853278885,
+        0.04067503918897447,
+        0.03235824132265758
+      ],
+      "trials": [
+        16,
+        32,
+        64,
+        128
+      ],
+      "v_sr": 2.419101982900032e-05,
+      "variant_labels": [
+        "ma6",
+        "ma8",
+        "ma10",
+        "ma12",
+        "top6"
+      ],
+      "variant_sr_hat": [
+        -0.010535619356896581,
+        -0.00941911972193404,
+        -0.008636186431327762,
+        -0.007681915906917223,
+        0.001677672333180616
+      ]
+    },
+    "descriptive": {
+      "cagr_total": 0.09888351400830042,
+      "max_drawdown": 0.5228655354061532,
+      "max_gross": 1.0,
+      "mean_turnover": 0.14594865640980612,
+      "time_in_market": 0.9168334359605911,
+      "total_cost_paid": 231.9383777458824,
+      "total_cost_share": 0.02035242072301781
+    },
+    "passes": false,
+    "passes_psr": false,
+    "recency": [
+      {
+        "effective_t": 1037,
+        "name": "from_2000",
+        "psr_zero": 0.3776188693165077,
+        "raw_t": 6621,
+        "start": "2000-01-01"
+      },
+      {
+        "effective_t": 690,
+        "name": "from_2008",
+        "psr_zero": 0.3473517771545297,
+        "raw_t": 4611,
+        "start": "2008-01-01"
+      },
+      {
+        "effective_t": 1085,
+        "name": "from_2022",
+        "psr_zero": 0.14322124141189074,
+        "raw_t": 1085,
+        "start": "2022-01-01"
+      }
+    ],
+    "redundancy": {
+      "active_bet_corr": 0.8213171559619914,
+      "combo_ann_sharpe": 0.18122804301693834,
+      "n_aligned": 8843,
+      "timing_vs_xtrend_corr": -0.043415678365315395
+    },
+    "regime_dependent": false,
+    "timing": {
+      "ann_sharpe": -0.13709520943970194,
+      "effective_t": 7312,
+      "full_psr_zero": 0.22908884490353043,
+      "gamma_3": -1.172444258323767,
+      "gamma_4": 50.82504705069978,
+      "mean_daily": -6.123103581347135e-05,
+      "monthly_psr_zero": 0.32022627132324477,
+      "n_monthly_obs": 1188,
+      "pw_block_length": 3.5531310242948435,
+      "raw_t": 25984,
+      "sr_hat": -0.008636186431327762
+    }
+  },
+  "study": "Industry-trend net-of-market (Study 9, ADR 0011)",
+  "verdict": {
+    "headline": "NON-VIABLE industry trend; timing does not beat always-invested net of cost",
+    "non_viable": true,
+    "reason": "timing-difference PSR(0) 0.229 below 0.95 (annualized timing -1.54%/yr): a long-or-cash trend is crash insurance, not a market-beater, the expected null"
+  }
+}
