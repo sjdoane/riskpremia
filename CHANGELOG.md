@@ -3,6 +3,27 @@
 What shipped, plus every review finding and its resolution (rule 2). Newest
 first. This is the audit trail; STATUS.md is the current-state snapshot.
 
+## 2026-06-08, session 22: the make-money search concluded, the capstone portfolio thesis
+
+Study 10's PR #33 merged. With ten studies across every major retail-reachable premium family now
+complete, the make-money search is concluded and the capstone synthesis is written.
+
+- `docs/research/0017-portfolio-thesis.md`: the reviewer-facing synthesis. The thesis in one
+  paragraph, the ten-study scoreboard, the one deployable result (Study 6) told honestly with its
+  caveats, the five cross-study methodology lessons (the net-of-market kill not net-of-bill; cost
+  realism is where edges die; deflation is decisive for mined factors; defensive timing is risk
+  management not a market-beater; the apparatus catches its own near-misses before real money), the
+  shared apparatus, and the conclusion.
+- README front door updated: the intro reframed to crypto-and-macro and the concluded search, a
+  thesis link, and a concluded-search banner. STATUS updated.
+
+The finding: across ten candidate premia, exactly one (Study 6, a cross-asset defensive trend)
+cleared the deflated, net-of-cost gate, and it is a classic defensive rule validated with rigor, not
+a novel edge. Five candidates were killed, three more were honest nulls, one was a positive
+measurement with no tradeable edge, and the apparatus caught its single near-miss (Study 10) before
+any capital was committed. The contribution is the reproducible, intellectually-honest apparatus, not
+a backtest. Docs-only; no gate or code change.
+
 ## 2026-06-07, session 21: Study 10 build, the quality (profitability) tilt gate (a real-but-thin premium)
 
 The gate pre-registered in ADR 0012 is implemented, run, and shipped with figures on
