@@ -1,9 +1,10 @@
 # RiskPremia
 
-A reproducible, intellectually-honest **measurement study** of crypto risk premia.
+A reproducible, intellectually-honest **measurement study** of crypto and macro risk premia.
 One apparatus (free, US-reachable, checksum-pinned data; a vendored deflated-Sharpe /
 purged-CPCV / bootstrap stack; a cost-model-first kill gate) is pointed at a sequence
-of candidate premia:
+of candidate premia. The make-money search is now concluded; the capstone synthesis is
+[docs/research/0017-portfolio-thesis.md](docs/research/0017-portfolio-thesis.md):
 
 1. **The perpetual funding carry** (Study 1): does a delta-neutral long-spot /
    short-perp book that collects funding survive realistic retail costs? **Result: an
@@ -99,7 +100,13 @@ failure.
 > quality (profitability) tilt, is done: a real but too-thin premium (a genuine, significant
 > Fama-French alpha that does not survive the deployable differential cost or the deflation), the
 > eighth honest result, where the gate prevented a false-pass live deployment
-> ([ADR 0012](docs/decisions/0012-pivot-to-quality-tilt.md)). Live state is
+> ([ADR 0012](docs/decisions/0012-pivot-to-quality-tilt.md)).
+>
+> **The make-money search is concluded.** Across ten studies spanning every major retail-reachable
+> premium family, exactly one candidate (Study 6) cleared the deflated, net-of-cost gate, and it is a
+> classic defensive rule validated with rigor, not a novel edge. The capstone synthesis, the
+> scoreboard, the one deployable result told honestly, and the cross-study methodology lessons, is in
+> [docs/research/0017-portfolio-thesis.md](docs/research/0017-portfolio-thesis.md). Live state is
 > always in [STATUS.md](STATUS.md).
 
 ## Study 6 result: a cross-asset defensive trend (the first qualified pass)
