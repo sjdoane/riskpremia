@@ -1,0 +1,10 @@
+{
+  "provenance": {
+    "fetched_utc": "2026-06-09T00:10:31+00:00",
+    "five_factor_sha256": "b2b22b068b4a0c5ab2d9cef82c54ab282365a07a00d407f392f88038d930babc",
+    "five_factor_url": "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Research_Data_5_Factors_2x3_daily_CSV.zip",
+    "op_sha256": "e86204a4b5a60d30d965c92de8a22f8dc544c39e52139bd64a0645f19c3dbc44",
+    "op_url": "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/Portfolios_Formed_on_OP_Daily_CSV.zip"
+  },
+  "schema_version": 1
+}

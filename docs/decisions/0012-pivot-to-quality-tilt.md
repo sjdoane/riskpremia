@@ -141,3 +141,69 @@ of any new code, then a post-implementation review. Figures follow.
 Accepted. The measured object, the frozen method, the gate design, and the honesty guardrails above
 are pre-registered. The fork, the adversarial findings, the literature check, and the data probes are
 in `docs/research/0015-quality-tilt-design.md`. The build and the measured result follow.
+
+## Design-review amendment (2026-06-07, before implementation)
+
+A senior-quant design review of the build plan, which measured the result directly on the live data
+through the project's own scoring stack, returned three Critical, three High, and several Medium
+findings, all folded in here before any code. The review found the headline difference PSR(0) sits at
+0.9505 only at trial-count-one-and-gross, and every honest tightening (the differential cost, the
+deflation, every recency slice) pushes it below the 0.95 bar. The elevated stakes (a possible live
+deployment) make false-pass avoidance paramount; the revisions below make the gate honest. The
+original text is superseded where it conflicts.
+
+1. **Critical: the cost is the deployable DIFFERENTIAL expense, not the high-leg expense alone.** A
+   quality ETF and a market ETF are both deployed, so the honest drag is the quality-ETF expense
+   ratio minus the market-ETF expense ratio. The frozen primary is 0.15 percent on the
+   high-profitability leg and 0.04 percent on the market leg (a net differential near 0.11 percent),
+   with a pre-registered sensitivity bracket of 0.05, 0.10, and 0.20 percent differential. The gross
+   (zero-cost) PSR is reported only as context, labeled "before the deployable expense differential",
+   never the headline. On the live data the differential cost alone takes the headline below the bar.
+2. **Critical: no separate reconstitution turnover (no double-count).** The held portfolio is a
+   static single portfolio that the build never rebalances, and the French daily series already
+   embeds the annual end-June reconstitution, so there is no build-side weight change to charge. The
+   pre-registration's separate per-side reconstitution turnover line is dropped; the differential
+   expense (which embeds an index fund's reconstitution drag) is the only cost. The cost-model basis
+   string records this.
+3. **Critical: the deflation ladder is a HARD gate condition, not a stress footnote.** A
+   trial-count-one PSR is not a pass for a factor as mined as quality. A clean make-money pass
+   requires the Deflated Sharpe to clear 0.95 at a named minimum trial count of 16 (literature-scale
+   for the quality factor). The trial ladder runs to 128, and the v_sr family is widened beyond the
+   breadth cut (the tercile, quintile, and decile are near-collinear) to span the weighting axis
+   (value and equal weighted) at minimum; the definitional axis (gross profitability, investment, the
+   quality composite) is acknowledged as a search the v_sr understates, so the reported deflation is a
+   lower bound on the true penalty. On the live data the headline fails deflation at every trial count
+   at or above three, and the widest cut (the tercile) is the strongest member, the signature of a
+   broad large-cap-quality beta rather than a monotone profitability premium.
+4. **High: the Fama-French alpha is a gate guardrail, not context.** The headline kill stays the raw
+   net-of-market difference (the deployable bundle a quality ETF gives you, which cannot strip its own
+   factor exposures), but a clean make-money pass additionally requires a positive Fama-French
+   five-factor alpha with the robust-minus-weak loading the dominant positive exposure, so a beta,
+   size, or value tilt cannot be deployed mislabeled as profitability alpha. The attribution reports
+   the five-factor alpha with a Newey-West (heteroskedasticity-and-autocorrelation-consistent)
+   standard error and t-statistic. No beta-scaling is applied: the measured high-profitability beta is
+   0.98, so the difference is not a disguised low-beta bet and adding a fitted scalar is unwarranted.
+5. **High: a 2010-onward recency slice is pre-registered.** The quality-ETF era (QUAL launched 2013)
+   is the decisive crowding and post-publication-decay stress for a candidate whose selling point is
+   low crowding. The recency slices are 2000, 2008, 2010, and 2022 onward; the verdict string names
+   the binding constraint (the deflation and the differential cost), as Study 8's named the leverage
+   cap.
+6. **High: the deployable-versus-proxy gap is stated up front.** The Kenneth French academic
+   operating-profitability value-weighted tercile is not the deployable MSCI-quality ETFs (QUAL and
+   peers use a sector-neutral composite of return-on-equity, leverage, and earnings stability over
+   roughly 125 large caps, with their own turnover and tracking error). A tercile pass demonstrates
+   the academic operating-profitability premium net of an assumed differential expense, not a QUAL
+   guarantee. This goes in the caveats and the verdict reason.
+7. **Medium: reuse the scoring scaffold, not the Study 9 timing simulator.** The strategy is a static
+   hold: the high-profitability net daily return is the portfolio return minus its expense, the market
+   net is the market return minus its expense, and the difference is scored. There is no monthly
+   rebalance, no signal, no weight vector, so the Study 9 simulator is not reused (copying it would
+   resurrect the reconstitution double-count). The redundancy reports only the difference-versus-
+   Study-6 correlation (there is no active bet for a static hold). The decomposition is
+   quality-specific (the raw difference, the five-factor alpha, and the robust-minus-weak-attributed
+   component), not the Study 9 timing-tilt-deploy split.
+8. **Medium: the make-money verdict semantics.** A make-money pass requires the headline difference
+   PSR to clear the bar AND the deflation to clear at trials 16 or more AND the five-factor alpha to
+   be positive AND the result not to be regime-dependent; anything less is reported as "the
+   operating-profitability premium is real but does not survive the deflated net-of-differential-cost
+   gate; survives only undeflated", an honest marginal-to-null result, not a deployable pass.

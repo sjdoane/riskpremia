@@ -62,13 +62,14 @@ of candidate premia:
    trend rule clears nothing (PSR(0) 0.229, annualized timing -1.54%/yr): it reduces risk but gives
    up return, and it is timing-redundant with Study 6 (active-bet correlation 0.82)
    ([ADR 0011](docs/decisions/0011-pivot-to-industry-trend-net-of-market.md)).
-10. **Long-only quality (profitability) tilt** (Study 10): the first candidate with a genuine
-    make-money shot since Study 6, asking whether holding the high-profitability portfolio beats
-    buy-and-hold the market net of cost. On clean daily Kenneth French operating-profitability
-    portfolios, scored as the high-profitability-minus-market difference (both value-weighted, so a
-    clean net-of-market comparison) with a Fama-French attribution. Profitability is the one major
-    factor with a positive absolute long-leg tilt and low turnover. Selected after an adversarial
-    fork redirected the registered low-volatility backup; build pending
+10. **Long-only quality (profitability) tilt** (Study 10): does holding the high-profitability
+    portfolio beat buy-and-hold the market net of cost? On clean daily Kenneth French
+    operating-profitability portfolios, scored as the high-profitability-minus-market difference.
+    **Result: a real but too-thin premium.** The operating-profitability premium is genuine
+    (Fama-French alpha +0.65%/yr, Newey-West t 2.76, robust-minus-weak dominant, beta 0.99), but
+    net of the deployable differential expense the difference clears nothing (PSR(0) 0.932, gross
+    0.951), the deflation demolishes it (Deflated Sharpe 0.35 at 16 trials), and it decays post-2010.
+    The gate prevented a false-pass live deployment
     ([ADR 0012](docs/decisions/0012-pivot-to-quality-tilt.md)).
 
 Sibling to [pit-backtest](https://github.com/sjdoane/pit-backtest), whose headline was a
@@ -95,8 +96,9 @@ failure.
 > the seventh honest result and (with Study 8) evidence that defensive equity timing does not beat
 > buy-and-hold at retail
 > ([ADR 0011](docs/decisions/0011-pivot-to-industry-trend-net-of-market.md)). Study 10, a long-only
-> quality (profitability) tilt and the first candidate with a genuine make-money shot since Study 6,
-> is pre-registered
+> quality (profitability) tilt, is done: a real but too-thin premium (a genuine, significant
+> Fama-French alpha that does not survive the deployable differential cost or the deflation), the
+> eighth honest result, where the gate prevented a false-pass live deployment
 > ([ADR 0012](docs/decisions/0012-pivot-to-quality-tilt.md)). Live state is
 > always in [STATUS.md](STATUS.md).
 
@@ -269,6 +271,43 @@ defensive equity timing, however the timer is built, does not beat buy-and-hold 
 # render the figures, then rebuild the gate artifact from the committed panel (no network)
 python -m scripts.regenerate_indtrend_figures
 python -m scripts.run_indtrend_gate
+```
+
+## Study 10 result: a quality (profitability) tilt (a real but too-thin premium)
+
+Does holding the high-profitability portfolio beat buy-and-hold the market net of cost? The Kenneth
+French high-operating-profitability value-weighted tercile, held statically, scored as the
+difference over the value-weight market, both deployed as ETFs so the honest cost is the differential
+expense. A Fama-French regression attributes the difference. 1963 to 2026.
+
+| Quantity | Value |
+| --- | --- |
+| Difference PSR(0), net of differential cost (the kill) | **0.932** (bar 0.95) |
+| Gross (no-cost) difference PSR(0) | **0.951** (before the deployable expense) |
+| Fama-French five-factor alpha (Newey-West t) | **+0.65%/yr (t 2.76)** |
+| FF5 loadings: market / RMW | 0.99 / **0.31** (quality, not beta or size) |
+| Deflated Sharpe at 16 / 128 trials | **0.35 / 0.11** |
+| Recency 2000 / 2010 / 2022 | 0.815 / 0.814 / 0.618 |
+
+A **real but too-thin** premium. The operating-profitability premium is genuine and statistically
+significant (a +0.65%/yr Fama-French alpha with a Newey-West t of 2.76, robust-minus-weak the
+dominant loading, market beta 0.99, so it is quality and not a disguised beta or size tilt). But net
+of the deployable differential expense (a quality ETF costs more to hold than a market ETF) the
+difference clears nothing (PSR(0) 0.932); the multiple-testing deflation for the heavily-mined
+quality factor collapses it to 0.35 at 16 trials (and the widest tercile is the strongest cut, a
+broad large-cap-quality signature); and it decays in the post-2010 quality-ETF era. The gross number
+(0.951) is a near-miss that the honest deployable cost and the deflation turn into a clear fail. The
+operator intended to deploy this live if it passed; the gate showed it is a real academic premium,
+not a retail make-money edge, before any capital was committed.
+
+![Quality tilt vs market net wealth and their ratio](docs/figures/quality_wealth.png)
+
+![Gross clears the bar; the deployable cost and deflation fail it](docs/figures/quality_scorecard.png)
+
+```powershell
+# render the figures, then rebuild the gate artifact from the committed panel (no network)
+python -m scripts.regenerate_quality_figures
+python -m scripts.run_quality_gate
 ```
 
 ## Study 2 result: the BTC variance risk premium

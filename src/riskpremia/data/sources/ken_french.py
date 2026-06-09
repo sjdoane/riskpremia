@@ -430,3 +430,142 @@ class KenFrench12IndustrySource:
     def fetch_value_weighted_daily(self) -> list[KenFrench12IndustryDaily]:
         """Fetch and parse the value-weighted daily 12-industry returns, sorted by date."""
         return parse_12_industry_value_weighted_daily(self._zip_text())
+
+
+# The operating-profitability daily portfolios (the Study 10 quality tilt). Same library; additive
+# so the earlier study paths are untouched.
+_OP_URL = (
+    "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/"
+    "Portfolios_Formed_on_OP_Daily_CSV.zip"
+)
+
+
+@attrs.frozen(slots=True)
+class KenFrenchOPDaily:
+    """One trading day of the operating-profitability portfolios (decimals).
+
+    `hi30_vw`, `hi20_vw`, `hi10_vw` are the value-weighted high-profitability tercile, quintile, and
+    decile (the deployable long legs and the breadth deflation family); `hi30_ew` is the
+    equal-weighted high tercile (a weighting deflation variant).
+    """
+
+    date: date
+    hi30_vw: Decimal
+    hi20_vw: Decimal
+    hi10_vw: Decimal
+    hi30_ew: Decimal
+
+
+def _op_section_columns(lines: list[str], start: int, end: int) -> tuple[int, dict[str, int]]:
+    """Find the header row in [start, end) and the column index of each of Hi 30/Hi 20/Hi 10."""
+    for i in range(start, end):
+        if "Hi 30" in lines[i] and "Lo 30" in lines[i]:
+            cols = [c.strip() for c in lines[i].split(",")]
+            try:
+                idx = {name: cols.index(name) for name in ("Hi 30", "Hi 20", "Hi 10")}
+            except ValueError as exc:
+                raise VenueFetchError("Ken French OP daily: missing a Hi column") from exc
+            return i, idx
+    raise VenueFetchError("Ken French OP daily: header row not found")
+
+
+def parse_op_daily(text: str) -> list[KenFrenchOPDaily]:
+    """Parse the value-weighted and equal-weighted daily operating-profitability sections.
+
+    The file holds a value-weighted daily section then an equal-weighted one; the high-profitability
+    tercile, quintile, and decile are read from the value-weighted block and the high tercile from
+    the equal-weighted block, joined on the trading day. Missing markers (at or below -99) raise.
+    """
+    lines = text.splitlines()
+    vw_title = next(
+        (i for i, ln in enumerate(lines) if "Value Weighted Returns" in ln and "Daily" in ln), None
+    )
+    ew_title = next(
+        (i for i, ln in enumerate(lines) if "Equal Weighted Returns" in ln and "Daily" in ln), None
+    )
+    if vw_title is None or ew_title is None or ew_title <= vw_title:
+        raise VenueFetchError("Ken French OP daily: value/equal weighted sections not found")
+    vw_hdr, vw_idx = _op_section_columns(lines, vw_title, ew_title)
+    ew_hdr, ew_idx = _op_section_columns(lines, ew_title, len(lines))
+
+    def _block(hdr: int, idx: dict[str, int], stop: int) -> dict[date, dict[str, Decimal]]:
+        out: dict[date, dict[str, Decimal]] = {}
+        for ln in lines[hdr + 1 : stop]:
+            fields = [f.strip() for f in ln.split(",")]
+            day = _parse_day(fields[0]) if fields else None
+            if day is None:
+                if out:
+                    break
+                continue
+            if len(fields) <= max(idx.values()):
+                continue
+            out[day] = {
+                name: _decimal(fields[col], field=name, day=fields[0]) for name, col in idx.items()
+            }
+        return out
+
+    vw = _block(vw_hdr, vw_idx, ew_title)
+    ew = _block(ew_hdr, ew_idx, len(lines))
+    out = [
+        KenFrenchOPDaily(
+            date=d, hi30_vw=vw[d]["Hi 30"], hi20_vw=vw[d]["Hi 20"], hi10_vw=vw[d]["Hi 10"],
+            hi30_ew=ew[d]["Hi 30"],
+        )
+        for d in sorted(vw)
+        if d in ew
+    ]
+    if not out:
+        raise VenueFetchError("Ken French OP daily: no overlapping value/equal rows parsed")
+    return out
+
+
+class KenFrenchOPSource:
+    """The operating-profitability daily portfolios (Study 10, ADR 0012)."""
+
+    def __init__(
+        self,
+        *,
+        url: str = _OP_URL,
+        open_zip: Callable[[str], bytes] | None = None,
+        timeout: float = 60.0,
+        max_attempts: int = 4,
+        retry_backoff_s: float = 2.0,
+    ) -> None:
+        self._url = url
+        self._open_zip = open_zip
+        self._timeout = timeout
+        self._max_attempts = max_attempts
+        self._retry_backoff_s = retry_backoff_s
+
+    def _zip_text(self) -> str:
+        if self._open_zip is not None:
+            raw = self._open_zip(self._url)
+        else:
+            last_error: Exception | None = None
+            raw = b""
+            for attempt in range(self._max_attempts):
+                try:
+                    req = urllib.request.Request(self._url, headers={"User-Agent": _USER_AGENT})
+                    with urllib.request.urlopen(req, timeout=self._timeout) as resp:
+                        raw = bytes(resp.read())
+                        break
+                except (urllib.error.URLError, TimeoutError, ConnectionError) as exc:
+                    last_error = exc
+                    if attempt + 1 < self._max_attempts:
+                        time.sleep(self._retry_backoff_s * (attempt + 1))
+            else:
+                raise VenueFetchError(
+                    f"Ken French OP fetch failed after {self._max_attempts} attempts"
+                ) from last_error
+        try:
+            archive = zipfile.ZipFile(io.BytesIO(raw))
+        except zipfile.BadZipFile as exc:
+            raise VenueFetchError("Ken French OP response was not a valid zip") from exc
+        names = [n for n in archive.namelist() if n.lower().endswith(".csv")]
+        if not names:
+            raise VenueFetchError("Ken French OP zip has no CSV member")
+        return archive.read(sorted(names)[0]).decode("utf-8", errors="strict")
+
+    def fetch_op_daily(self) -> list[KenFrenchOPDaily]:
+        """Fetch and parse the daily operating-profitability portfolios, sorted by date."""
+        return parse_op_daily(self._zip_text())
