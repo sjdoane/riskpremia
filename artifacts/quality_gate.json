@@ -1,0 +1,185 @@
+{
+  "caveats": [
+    "The kill is the high-profitability-MINUS-market difference (the deployable bundle a quality ETF gives you, which cannot strip its own factor exposures), net of the DIFFERENTIAL expense (a quality ETF costs more to hold than a market ETF); the gross difference is context only.",
+    "A clean make-money pass requires the difference PSR to clear the bar AND the Deflated Sharpe to clear at >= 16 trials (literature-scale for the mined quality factor) AND a positive Fama-French five-factor alpha with robust-minus-weak the dominant loading; anything less is the operating-profitability premium surviving only undeflated, not a deployable result.",
+    "The Kenneth French academic operating-profitability value-weighted tercile is NOT a quality ETF (QUAL and peers use a sector-neutral composite of return-on-equity, leverage, and earnings stability over roughly 125 large caps); a tercile pass is the academic premium net of an assumed differential expense, not a QUAL guarantee.",
+    "The held portfolio is static (no build-side rebalance), and the French daily series already embeds the annual end-June reconstitution, so there is no separate turnover charge."
+  ],
+  "cost_model": {
+    "basis": "differential expense (quality ER minus market ER); static hold, no turnover",
+    "differential_annual": 0.0011,
+    "expense_hi_annual": 0.0015,
+    "expense_mkt_annual": 0.0004
+  },
+  "data_end": "2026-04-30",
+  "data_start": "1963-07-01",
+  "fingerprint": {
+    "n_panel_rows": 15813,
+    "panel_relpath": "tests/data/quality_panel.csv",
+    "panel_sha256": "f1f239a8de6d2dc84c3d10af7a286dd6d87c8dcd28bc323274db14e4676bb0fa",
+    "provenance_relpath": "tests/data/quality_panel_sources.json",
+    "provenance_sha256": "f74b8b3f7c967ca8c68e285e46a89133c05482986124a987c93a2cc9b30c19cb"
+  },
+  "knobs": {
+    "expense_hi_annual": 0.0015,
+    "expense_mkt_annual": 0.0004,
+    "min_trial_count": 16,
+    "portfolio": "hi30_vw",
+    "trading_days_per_year": 252.0,
+    "viability_bar": 0.95
+  },
+  "n_scored_days": 15813,
+  "schema_version": 1,
+  "score": {
+    "attribution": {
+      "alpha_ann": 0.006456804188966619,
+      "alpha_daily": 2.5622238845105633e-05,
+      "alpha_t_stat": 2.759820288775973,
+      "beta_cma": -0.011226462933077608,
+      "beta_hml": -0.10204007321055553,
+      "beta_mkt": 0.995083436588474,
+      "beta_rmw": 0.3117385962813207,
+      "beta_smb": -0.0318733341390422,
+      "rmw_is_dominant": true
+    },
+    "context": {
+      "hi_ann_sharpe": 0.5103995523936632,
+      "hi_net_of_bill_psr_zero": 0.9952672624678557,
+      "market_ann_sharpe": 0.44597293992770465
+    },
+    "cost_sensitivity": [
+      {
+        "differential_annual": 0.0005,
+        "full_psr_zero": 0.9426046610073262
+      },
+      {
+        "differential_annual": 0.001,
+        "full_psr_zero": 0.9337099270703995
+      },
+      {
+        "differential_annual": 0.002,
+        "full_psr_zero": 0.9127611759270217
+      }
+    ],
+    "cpcv": {
+      "fold_median": 0.8413216728398791,
+      "fold_min": 0.6138902508948935,
+      "fold_psr_zero": [
+        0.65582037614333,
+        0.8719171189363816,
+        0.8982309883815951,
+        0.9018196668509656,
+        0.8413216728398791,
+        0.6292425546972613,
+        0.702009741048467,
+        0.6529733681330685,
+        0.6138902508948935,
+        0.6548367925781022,
+        0.9209662719226626,
+        0.9500511183921058,
+        0.8133207616145124,
+        0.8730434449880904,
+        0.958533976044461
+      ],
+      "k_test": 2,
+      "min_test_size": 5270,
+      "n_groups": 6,
+      "n_splits": 15
+    },
+    "decomposition": {
+      "ff5_alpha_ann": 0.006456804188966619,
+      "raw_difference_ann": 0.011295617529880479,
+      "rmw_component_ann": 0.009834545421490079
+    },
+    "deflation": {
+      "dsr_at_min_trials": 0.35047960970640646,
+      "dsr_by_trials": [
+        0.48853310864802196,
+        0.35047960970640646,
+        0.2433474612309826,
+        0.16452761152233686,
+        0.10880555731249453
+      ],
+      "passes_at_min_trials": false,
+      "trials": [
+        8,
+        16,
+        32,
+        64,
+        128
+      ],
+      "v_sr": 0.0002348238524013015,
+      "variant_labels": [
+        "hi30_vw",
+        "hi20_vw",
+        "hi10_vw",
+        "hi30_ew"
+      ],
+      "variant_sr_hat": [
+        0.021934516178066608,
+        0.01550719741336989,
+        0.010492951540617475,
+        0.04516004392233895
+      ]
+    },
+    "difference": {
+      "ann_sharpe": 0.3481996496141232,
+      "effective_t": 4610,
+      "full_psr_zero": 0.9318090705893962,
+      "gamma_3": 0.05980742471776291,
+      "gamma_4": 8.837709257307903,
+      "gross_full_psr_zero": 0.9505317390987291,
+      "mean_daily": 4.0458799721747955e-05,
+      "monthly_psr_zero": 0.969058300607198,
+      "n_monthly_obs": 754,
+      "pw_block_length": 3.4294811599522332,
+      "raw_t": 15813,
+      "sr_hat": 0.021934516178066608
+    },
+    "ff5_alpha_positive": true,
+    "make_money_pass": false,
+    "passes_deflation": false,
+    "passes_psr": false,
+    "recency": [
+      {
+        "effective_t": 1827,
+        "name": "from_2000",
+        "psr_zero": 0.8149124052524005,
+        "raw_t": 6621,
+        "start": "2000-01-01"
+      },
+      {
+        "effective_t": 4611,
+        "name": "from_2008",
+        "psr_zero": 0.9490127148095253,
+        "raw_t": 4611,
+        "start": "2008-01-01"
+      },
+      {
+        "effective_t": 2804,
+        "name": "from_2010",
+        "psr_zero": 0.8138938786565066,
+        "raw_t": 4106,
+        "start": "2010-01-01"
+      },
+      {
+        "effective_t": 752,
+        "name": "from_2022",
+        "psr_zero": 0.6183495020527396,
+        "raw_t": 1085,
+        "start": "2022-01-01"
+      }
+    ],
+    "redundancy": {
+      "difference_vs_xtrend_corr": -0.05852596749954524,
+      "n_aligned": 8843
+    },
+    "regime_dependent": false
+  },
+  "study": "Quality (profitability) tilt (Study 10, ADR 0012)",
+  "verdict": {
+    "headline": "NON-VIABLE quality tilt; does not beat the market net of differential cost",
+    "non_viable": true,
+    "reason": "difference PSR(0) 0.932 below 0.95 at the deployable differential expense (the gross PSR 0.951 is before that cost)"
+  }
+}

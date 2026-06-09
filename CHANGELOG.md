@@ -3,6 +3,67 @@
 What shipped, plus every review finding and its resolution (rule 2). Newest
 first. This is the audit trail; STATUS.md is the current-state snapshot.
 
+## 2026-06-07, session 21: Study 10 build, the quality (profitability) tilt gate (a real-but-thin premium)
+
+The gate pre-registered in ADR 0012 is implemented, run, and shipped with figures on
+`feat/quality-tilt-gate`. The operator flagged a live-deployment intent, so the build was held to
+extra rigor (false-pass avoidance is paramount for real money).
+
+- `src/riskpremia/quality/`: `gate.py` (the static-hold high-profitability-minus-market difference
+  net of the differential expense = the kill; the Fama-French five-factor OLS plus a Newey-West
+  alpha t-statistic as a gate guardrail; the deflation ladder as a hard gate condition; the CPCV,
+  recency, and cost-sensitivity stress; the make-money verdict semantics), `fixtures.py`,
+  `figures.py`, `errors.py`.
+- `data/sources/ken_french.py`: the operating-profitability daily loader (additive).
+- Scripts: `build_quality_inputs.py` (network, commits the panel), `run_quality_gate.py`
+  (no-network), `regenerate_quality_figures.py`.
+- Committed outputs: `tests/data/quality_panel.csv` (15813 rows, SHA-stamped) + provenance,
+  `artifacts/quality_gate.json`, `docs/figures/quality_{wealth,scorecard}.png`.
+- Tests: the gate building blocks (including a synthetic OLS-recovers-a-known-alpha check), the
+  offline reproduction to the digit, the real-but-not-deployable framing, and the figure render
+  (skipif matplotlib). 322 offline pass.
+- `docs/research/0016-quality-tilt-result.md`: the result note. README / STATUS / pyproject updated.
+
+**Result (1963-07 to 2026-04, 15813 daily obs, effective T 4610): NON-VIABLE, a real but too-thin
+premium.** The operating-profitability premium is genuine and statistically significant: the
+Fama-French five-factor alpha is +0.65%/yr with a Newey-West t of 2.76, robust-minus-weak the
+dominant loading (0.31), and a market beta of 0.99 (so it is profitability, not a beta or size
+artifact). But net of the deployable differential expense (a quality ETF costs more to hold than a
+market ETF) the high-profitability-minus-market difference PSR(0) is 0.932, below the 0.95 bar; the
+gross (no-cost) PSR is 0.951; the Deflated Sharpe collapses to 0.35 at 16 trials (the widest tercile
+is the strongest member, a broad large-cap-quality signature); and the premium decays post-2010
+(recency 0.815/0.949/0.814/0.618). The high net-of-bill PSR (0.9953) is the equity premium, reported
+as context. The make-money pass is False. The gate prevented a false-pass live deployment: the gross
+number is a near-miss that the deployable cost and the deflation turn into a clear fail.
+
+#### Design review (pre-build) and resolution
+
+A senior-quant design review of the build plan, which measured the result directly on the live data,
+returned three Critical, three High, and several Medium findings, all folded into the ADR 0012
+amendment before any code. The Criticals: the kill must be net of the differential expense (a
+quality ETF versus a market ETF), not the gross or the high-leg expense alone; there is no separate
+reconstitution turnover (a static hold; the French series embeds reconstitution, so charging it
+would double-count); and the deflation ladder is a hard gate condition (a clean pass requires the
+Deflated Sharpe to clear at a literature-scale 16 trials), not a footnote. The Highs made the
+Fama-French alpha a gate guardrail (a pass requires a positive alpha with robust-minus-weak dominant,
+with a Newey-West t-statistic, so a beta or size tilt cannot be deployed mislabeled as quality),
+added a 2010-onward recency slice (the quality-ETF era), and stated the deployable-versus-QUAL gap.
+
+#### Post-implementation review and resolution
+
+An adversarial post-implementation review returned a SHIP verdict with no Critical or High findings.
+It re-derived every load-bearing number through a different numerical path (a numpy least-squares
+solve versus the gate's matrix inverse, and a hand-rolled Newey-West) and matched the artifact to six
+digits, confirmed byte-for-byte determinism, and proved the make-money boolean has no false-pass path
+(the stress slices are monotone tighteners, and a synthetic genuine alpha does fire a pass). It noted
+the result is over-determined: the headline fails at the easiest threshold (a single-trial PSR of
+0.9318 net of the differential cost) before the deflation binds. The three findings are cosmetic and
+non-blocking (the from_2008 slice gets the most-generous deflation treatment and still misses; the
+fetch timestamp and the upstream-hash indirection are harmless), and the deployable-versus-QUAL gap
+is already in the caveats.
+
+Verification: 322 offline pass, mypy strict clean (107 source files), ruff clean, em-dash clean.
+
 ## 2026-06-07, session 20: Study 10 pivot, a long-only quality (profitability) tilt (pre-registration)
 
 After the Study 9 industry-trend null merged (PR #31), a fork selected Study 10. Shipped docs-only

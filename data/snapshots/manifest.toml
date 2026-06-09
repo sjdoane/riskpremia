@@ -154,6 +154,32 @@ rows = 1
 note = "Committed provenance for tests/data/indtrend_panel.csv."
 
 [[snapshot]]
+name = "quality-panel"
+venue = "ken_french"
+instrument = "op-daily-plus-five-factor"
+kind = "reproducibility_fixture"
+relpath = "tests/data/quality_panel.csv"
+source_url = "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/Portfolios_Formed_on_OP_Daily_CSV.zip"
+fetched_utc = 2026-06-09T00:10:31+00:00
+sha256 = "f1f239a8de6d2dc84c3d10af7a286dd6d87c8dcd28bc323274db14e4676bb0fa"
+size_bytes = 1310501
+rows = 15813
+note = "Committed daily Kenneth French operating-profitability panel (high-profitability VW tercile/quintile/decile + EW high tercile + the five factors + the bill) for the Study 10 quality tilt. As-of snapshot; the SHA256 attests tamper-evidence of the committed series."
+
+[[snapshot]]
+name = "quality-sources"
+venue = "ken_french"
+instrument = "op-daily-plus-five-factor"
+kind = "reproducibility_fixture"
+relpath = "tests/data/quality_panel_sources.json"
+source_url = "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/ftp/F-F_Research_Data_5_Factors_2x3_daily_CSV.zip"
+fetched_utc = 2026-06-09T00:10:31+00:00
+sha256 = "f74b8b3f7c967ca8c68e285e46a89133c05482986124a987c93a2cc9b30c19cb"
+size_bytes = 522
+rows = 1
+note = "Committed provenance for tests/data/quality_panel.csv."
+
+[[snapshot]]
 name = "volmanaged-factor-panel"
 venue = "ken_french"
 instrument = "five-factor-plus-momentum-daily"
