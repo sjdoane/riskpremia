@@ -134,6 +134,10 @@ secrets/
 credentials.json
 service-account*.json
 
+# Paper-trading runtime state (the operator's growing levels, paper account, and journal).
+# Regenerable from the committed seed; the personal track record is not committed to the repo.
+live_state/
+
 # Local scratch
 .claude/local/
 .claude/settings.local.json

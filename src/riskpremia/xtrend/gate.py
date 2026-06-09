@@ -371,6 +371,24 @@ def _levels(returns: Sequence[float]) -> list[float]:
     return out
 
 
+def signal_from_monthly_levels(monthly_levels: Sequence[float], sma_months: int) -> dict[int, bool]:
+    """The frozen trend rule core: for each month index m with a full window, whether the level is
+    strictly above its `sma_months`-month simple moving average.
+
+    This is the single source of truth for the long-or-cash decision. The backtest feeds it
+    month-end levels reconstructed from daily returns; the live signal feeds it the observed
+    month-end levels of the traded proxies. Sharing this one function is what keeps the deployed
+    rule from drifting away from the gated backtest.
+    """
+    if sma_months < 1:
+        raise XTrendError("sma_months must be positive")
+    out: dict[int, bool] = {}
+    for m in range(sma_months - 1, len(monthly_levels)):
+        sma = statistics.fmean(monthly_levels[m - sma_months + 1 : m + 1])
+        out[m] = monthly_levels[m] > sma
+    return out
+
+
 def _signal_by_month(daily: _Daily, sma_months: int) -> dict[int, dict[str, bool]]:
     """Signal at each monthly index m: is each sleeve's level above its `sma_months` SMA.
 
@@ -383,9 +401,8 @@ def _signal_by_month(daily: _Daily, sma_months: int) -> dict[int, dict[str, bool
         # Levels are indexed 0..len(returns); daily.dates[k] aligns to level index k+1.
         level = _levels(_sleeve_returns(daily, sleeve))
         monthly_level = [level[i + 1] for i in month_idx]
-        for m in range(sma_months - 1, len(monthly_level)):
-            sma = statistics.fmean(monthly_level[m - sma_months + 1 : m + 1])
-            signals.setdefault(m, {})[sleeve] = monthly_level[m] > sma
+        for m, active in signal_from_monthly_levels(monthly_level, sma_months).items():
+            signals.setdefault(m, {})[sleeve] = active
     return signals
 
 
