@@ -3,6 +3,54 @@
 What shipped, plus every review finding and its resolution (rule 2). Newest
 first. This is the audit trail; STATUS.md is the current-state snapshot.
 
+## 2026-06-08, session 23: Phase 0 paper-trading system for the Study 6 deployment
+
+Built the zero-capital paper-trading system for the one deployable result (Study 6), at the project's
+full rigor. The deployment runbook (`docs/deployment/study6-live-runbook.md`) frames it honestly: the
+strategy is risk management, not alpha; it is regime-dependent; and it is deployed as the
+crash-insured allocation it is.
+
+- Single source of truth: extracted `signal_from_monthly_levels` in `xtrend/gate.py` (the frozen
+  long-or-cash core) and rewired `_signal_by_month` to call it. Verified byte-identical: the nine
+  xtrend tests pass and `artifacts/xtrend_gate.json` regenerates to the same git hash.
+- `src/riskpremia/live/`: `signal.py` (the live target allocation, which takes the active flag
+  straight from the frozen rule), `paper.py` (a self-contained paper account that marks at month-end
+  prices and rebalances with the backtest's exact turnover-cost mechanics, the cash sleeve held as
+  the bill ETF), `levels.py` (the month-end levels file), `journal.py` (the appended monthly track
+  record), `errors.py`.
+- Scripts: `build_live_levels.py` (network; fetches VTI/IEF/SGOV monthly adjusted closes from Yahoo,
+  total-return basis), `live_signal.py` (read-only signal), `paper_rebalance.py` (the monthly paper
+  loop; the account starts fresh now, so this is forward paper trading, not a replay).
+- Committed seed `tests/data/live_levels_seed.csv` (72 months, 2020-06 to 2026-05). Runtime state
+  (`live_state/`) is gitignored.
+- Tests: the decisive reconciliation (the live signal reproduces the backtest's per-sleeve flag at
+  every month, non-vacuously), plus the paper engine and the IO round-trips. 339 offline pass.
+
+The system runs and already shows the research's honesty in real time: as of 2026-05 the equity
+sleeve (VTI) is above its ten-month average and held, while the long-Treasury sleeve (IEF) is below
+its average and defensively in cash, the exact rate-regime weakness Study 6 flagged.
+
+#### Post-implementation review and resolution
+
+An adversarial post-implementation review returned SHIP after one High fix. It verified every claim by
+execution: the refactored `gate.py` regenerates the byte-identical artifact, the reconciliation is
+genuine (it drives the live and backtest paths from the same levels and asserts equality at all 415
+scored months, non-vacuously), there is no look-ahead (a month-T signal earns month T+1's return and
+the account starts fresh rather than replaying the backtest), the weighting and turnover cost match
+`_simulate`, the system is genuinely offline with no order path and no secrets, and the journal cannot
+overstate performance. The High finding: nothing enforced that the levels file is a gapless
+consecutive monthly series, so a skipped or failed month would silently average non-consecutive
+months and make the live signal diverge from the gated rule with no error. Resolved: `read_levels` and
+`append_level` now require consecutive calendar months (a gap raises `LiveError`), and
+`build_live_levels append` backfills every missing completed month from the fetched window. The two
+Low doc nits (a stale function name and the section ordering) are fixed, a weights-sum-to-one
+assertion hardens `rebalance`, and the runbook now discloses the one-day execution-timing offset and
+that the reconciliation is scoped to the rule, not the data source.
+
+#### Verification
+
+ruff clean, mypy strict clean (116 source files), 340 offline tests pass, em-dash clean.
+
 ## 2026-06-08, session 22: the make-money search concluded, the capstone portfolio thesis
 
 Study 10's PR #33 merged. With ten studies across every major retail-reachable premium family now
